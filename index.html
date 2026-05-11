@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>AccessCampus — Parul University Goa</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg: #050714;
+  --bg2: #09111f;
+  --surface: rgba(17, 24, 39, .86);
+  --surface2: rgba(30, 41, 59, .88);
+  --surface3: rgba(51, 65, 85, .9);
+  --border: rgba(255,255,255,0.12);
+  --border2: rgba(255,255,255,0.20);
+  --cyan: #22d3ee;
+  --cyan2: #06b6d4;
+  --green: #00e676;
+  --amber: #ffab40;
+  --red: #ff5252;
+  --purple: #bb86fc;
+  --pink: #f48fb1;
+  --text: #edf2f7;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font: 'Instrument Sans', sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --fs: 1; /* font scale multiplier */
+}
+[data-fs="1"] { font-size: 100%; }
+[data-fs="1.15"] { font-size: 115%; }
+[data-fs="1.3"] { font-size: 130%; }
+[data-fs="1.5"] { font-size: 150%; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body { font-family: var(--font); background: radial-gradient(circle at 18% 8%, rgba(34,211,238,.22), transparent 34%), radial-gradient(circle at 85% 18%, rgba(187,134,252,.18), transparent 28%), linear-gradient(135deg, #050714 0%, #071423 48%, #0b1020 100%); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ═══ SPLASH ═══ */
+#splash {
+  position: fixed; inset: 0; z-index: 9999; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  transition: opacity .7s ease;
+}
+#splash.hide { opacity: 0; pointer-events: none; }
+.splash-ring {
+  position: relative; width: 100px; height: 100px;
+  display: flex; align-items: center; justify-content: center;
+}
+.splash-ring::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--cyan);
+  border-right-color: var(--green);
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.splash-logo-inner {
+  width: 74px; height: 74px;
+  background: linear-gradient(135deg, #0d2535, #0a1f2e);
+  border-radius: 22px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border2); font-size: 34px;
+}
+.splash-wordmark { font-family: var(--font-display); font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+.splash-wordmark span { color: var(--cyan); }
+.splash-tagline { font-size: 13px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; }
+.splash-univ { font-size: 12px; color: var(--text3); }
+.splash-progress { width: 160px; height: 2px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.splash-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--green)); animation: fill 2.4s cubic-bezier(.4,0,.2,1) forwards; width: 0; }
+@keyframes fill { to { width: 100%; } }
+
+/* ═══ APP ═══ */
+#app { display: none; flex-direction: column; height: 100vh; }
+#app.visible { display: flex; }
+
+/* ═══ TOPBAR ═══ */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: linear-gradient(135deg, rgba(15,23,42,.94), rgba(8,47,73,.82)); border-bottom: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(18px);
+  flex-shrink: 0; gap: 10px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-logo {
+  width: 36px; height: 36px; border-radius: 11px;
+  background: linear-gradient(135deg, #0d3040, #082030);
+  border: 1px solid var(--cyan); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.brand-name { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.brand-name span { color: var(--cyan); }
+.brand-sub { font-size: 9px; color: var(--text3); letter-spacing: .5px; text-transform: uppercase; }
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+
+.pill-btn {
+  height: 30px; padding: 0 11px; border-radius: 99px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+  font-size: 11px; font-weight: 600; color: var(--text2); transition: all .2s;
+  font-family: var(--font);
+}
+.pill-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.pill-btn.danger { color: var(--red); border-color: rgba(255,82,82,.3); }
+.pill-btn.danger:hover { background: rgba(255,82,82,.1); }
+
+/* Font size toolbar */
+.fs-bar {
+  display: flex; align-items: center; gap: 5px; padding: 6px 14px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow: hidden;
+}
+.fs-bar.hidden { display: none; }
+.fs-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
+.fs-btn {
+  height: 26px; padding: 0 10px; border-radius: 99px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all .2s; font-family: var(--font);
+}
+.fs-btn.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+
+/* ═══ TABS ═══ */
+.tabs {
+  display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; overflow-x: auto; scrollbar-width: none; gap: 0;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 1; min-width: 54px; padding: 7px 4px 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  cursor: pointer; border-bottom: 2px solid transparent; position: relative;
+  font-size: 9px; font-weight: 600; color: var(--text3); transition: all .2s;
+  font-family: var(--font); letter-spacing: .4px; text-transform: uppercase;
+}
+.tab .ti { font-size: 17px; }
+.tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+.tab.sos-tab { color: var(--red); }
+.tab.sos-tab.active { border-bottom-color: var(--red); }
+.tab-badge {
+  position: absolute; top: 4px; right: calc(50% - 12px);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red); border: 1px solid var(--surface);
+}
+
+/* ═══ PAGES ═══ */
+.page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.page.active { display: flex; animation: fadeup .3s ease; }
+@keyframes fadeup { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ═══ MAP ═══ */
+#map { flex: 1; z-index: 1; }
+.map-page { position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.map-overlay {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+  padding: 10px; pointer-events: none; display: flex; flex-direction: column; gap: 8px;
+}
+.search-row { display: flex; gap: 7px; pointer-events: all; }
+.s-input {
+  flex: 1; padding: 9px 13px; border-radius: var(--radius-sm);
+  background: rgba(19,25,32,.96); backdrop-filter: blur(16px);
+  border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--font); font-size: 13px; outline: none; transition: border-color .2s;
+}
+.s-input:focus { border-color: var(--cyan); }
+.s-input::placeholder { color: var(--text3); }
+.s-btn {
+  padding: 9px 16px; border-radius: var(--radius-sm);
+  background: var(--cyan); border: none; color: #000;
+  font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap;
+  font-family: var(--font); transition: opacity .2s;
+}
+.s-btn:hover { opacity: .85; }
+.map-pills { display: flex; gap: 6px; pointer-events: all; flex-wrap: wrap; }
+.map-pill {
+  padding: 4px 11px; border-radius: 99px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border2); background: rgba(19,25,32,.9); backdrop-filter: blur(8px);
+  cursor: pointer; color: var(--text2); transition: all .2s;
+}
+.map-pill.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+.map-pill.warn { }
+.map-pill.warn.active { background: var(--amber); color: #000; border-color: var(--amber); }
+
+/* Legend */
+.map-legend {
+  position: absolute; bottom: 0; right: 0; z-index: 10;
+  pointer-events: none; padding: 10px;
+}
+.legend-box {
+  background: rgba(19,25,32,.95); backdrop-filter: blur(12px);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 130px;
+}
+.legend-title { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 2px; }
+.legend-item { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--text2); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Route bar */
+.route-bar {
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 11px 14px; display: none; flex-shrink: 0;
+}
+.route-bar.show { display: block; animation: fadeup .3s; }
+.rb-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.rb-title { font-size: 12px; font-weight: 700; font-family: var(--font-display); }
+.rb-meta { display: flex; gap: 6px; }
+.rb-badge {
+  padding: 2px 9px; border-radius: 99px; font-size: 9px; font-weight: 700;
+  background: rgba(0,230,118,.12); color: var(--green); border: 1px solid rgba(0,230,118,.25);
+}
+.rb-time { padding: 2px 9px; border-radius: 99px; font-size: 9px; font-weight: 700;
+  background: rgba(0,212,232,.12); color: var(--cyan); border: 1px solid rgba(0,212,232,.25); }
+.rb-steps { display: flex; flex-direction: column; gap: 3px; }
+.rb-step { font-size: 11px; color: var(--text2); display: flex; gap: 8px; align-items: flex-start; }
+.rb-close { font-size: 16px; cursor: pointer; color: var(--text3); padding: 0 0 0 8px; }
+
+/* ═══ FACILITIES ═══ */
+.scroller { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 16px; }
+.sec-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: var(--text3);
+  text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Horizontal scroll categories */
+.cat-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; margin-bottom: 4px; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-chip {
+  flex-shrink: 0; padding: 6px 14px; border-radius: 99px; font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); cursor: pointer; transition: all .2s;
+}
+.cat-chip.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+
+.fac-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.fac-card {
+  background: linear-gradient(145deg, rgba(30,41,59,.94), rgba(15,23,42,.86)); border: 1px solid var(--border); border-radius: 22px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.26);
+  padding: 13px; cursor: pointer; transition: all .25s; position: relative; overflow: hidden;
+}
+.fac-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2.5px; background: var(--c, var(--cyan)); border-radius: 99px 99px 0 0; }
+.fac-card:hover { border-color: var(--c, var(--cyan)); transform: translateY(-1px); }
+.fac-card:active { transform: scale(.98); }
+.fc-icon { font-size: 24px; margin-bottom: 5px; }
+.fc-name { font-size: 12px; font-weight: 600; }
+.fc-count { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.fc-status { display: flex; align-items: center; gap: 4px; font-size: 10px; margin-top: 5px; }
+.sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; animation: pulse-dot 2s infinite; }
+.sdot.busy { background: var(--amber); }
+.sdot.closed { background: var(--red); animation: none; }
+@keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+.nearby-list { display: flex; flex-direction: column; gap: 8px; }
+.ni {
+  background: linear-gradient(135deg, rgba(17,24,39,.92), rgba(8,47,73,.38)); border: 1px solid var(--border); border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.22);
+  padding: 11px 13px; display: flex; align-items: center; gap: 11px; cursor: pointer;
+  transition: all .2s; position: relative;
+}
+.ni:hover { border-color: var(--cyan); }
+.ni-ico {
+  font-size: 18px; width: 36px; height: 36px; background: var(--surface2); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ni-info { flex: 1; }
+.ni-name { font-size: 12px; font-weight: 600; }
+.ni-detail { font-size: 10px; color: var(--text3); margin-top: 2px; line-height: 1.5; }
+.ni-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.ni-tag {
+  font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 99px;
+  background: rgba(0,212,232,.1); color: var(--cyan); border: 1px solid rgba(0,212,232,.2);
+}
+.ni-tag.green { background: rgba(0,230,118,.1); color: var(--green); border-color: rgba(0,230,118,.2); }
+.ni-tag.amber { background: rgba(255,171,64,.1); color: var(--amber); border-color: rgba(255,171,64,.2); }
+.ni-tag.red { background: rgba(255,82,82,.1); color: var(--red); border-color: rgba(255,82,82,.2); }
+.ni-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.ni-dist { font-size: 11px; color: var(--cyan); font-weight: 700; font-family: var(--font-mono); white-space: nowrap; }
+.ni-dir { font-size: 9px; color: var(--text3); }
+
+/* ═══ VOICE ═══ */
+.voice-page {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 24px 20px; overflow-y: auto;
+}
+.v-orb-wrap { position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.v-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1.5px solid rgba(0,212,232,.15);
+  animation: vr-expand 2.5s ease infinite;
+}
+.v-ring:nth-child(2) { inset: -14px; animation-delay: .7s; }
+.v-ring:nth-child(3) { inset: -28px; animation-delay: 1.4s; }
+@keyframes vr-expand { 0%,100% { opacity:.5; transform: scale(.9); } 50% { opacity:0; transform: scale(1.1); } }
+.v-orb {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #0d2535, #060d13);
+  border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center;
+  font-size: 44px; cursor: pointer; z-index: 1; transition: all .3s; position: relative;
+}
+.v-orb.on { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 40px rgba(0,212,232,.2); }
+.v-orb.on .v-ring { border-color: rgba(0,212,232,.25); animation: vr-expand 1.5s ease infinite; }
+.v-status { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.v-sub { font-size: 12px; color: var(--text2); text-align: center; max-width: 280px; line-height: 1.7; }
+.v-transcript {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 13px 16px; font-size: 12px; color: var(--text2);
+  width: 100%; max-width: 340px; min-height: 54px; line-height: 1.6; font-style: italic; text-align: center;
+}
+.v-cmds { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 6px; }
+.v-cmd {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 13px; font-size: 12px; display: flex; align-items: center; gap: 9px;
+  cursor: pointer; transition: all .2s;
+}
+.v-cmd:hover { border-color: var(--cyan); background: var(--surface2); }
+.v-cmd .vtag { font-family: var(--font-mono); font-size: 9px; color: var(--cyan); border: 1px solid rgba(0,212,232,.3); padding: 1px 6px; border-radius: 4px; }
+.v-cmd .vico { font-size: 16px; }
+
+/* ═══ SOS ═══ */
+.sos-page { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 16px; overflow-y: auto; }
+.sos-banner {
+  width: 100%; background: rgba(255,82,82,.08); border: 1px solid rgba(255,82,82,.25);
+  border-radius: var(--radius); padding: 11px 14px; text-align: center;
+}
+.sos-banner h2 { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--red); }
+.sos-banner p { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.6; }
+.sos-btn {
+  width: 150px; height: 150px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a0f0f, #1a0505);
+  border: 2px solid var(--red); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; cursor: pointer;
+  box-shadow: 0 0 40px rgba(255,82,82,.3); transition: all .2s;
+  color: #fff; font-weight: 700; font-size: 12px; text-decoration: none;
+  font-family: var(--font); flex-shrink: 0; position: relative;
+  animation: sos-pulse 3s infinite;
+}
+@keyframes sos-pulse { 0%,100% { box-shadow: 0 0 30px rgba(255,82,82,.25); } 50% { box-shadow: 0 0 60px rgba(255,82,82,.5); } }
+.sos-btn:hover { transform: scale(1.04); }
+.sos-btn:active { transform: scale(.97); }
+.sos-btn .si { font-size: 38px; }
+.sos-ring { position: absolute; inset: -14px; border-radius: 50%; border: 1.5px solid rgba(255,82,82,.25); animation: sosring 2s infinite; }
+@keyframes sosring { 0%,100% { opacity:.4; transform: scale(.95); } 50% { opacity:.1; transform: scale(1.05); } }
+
+.sos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 340px; }
+.sos-opt {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; transition: all .2s; text-align: center; text-decoration: none; color: var(--text);
+}
+.sos-opt:hover { border-color: var(--red); background: rgba(255,82,82,.05); }
+.sos-opt .oi { font-size: 22px; }
+.sos-opt .ot { font-size: 11px; font-weight: 700; }
+.sos-opt .os { font-size: 9px; color: var(--text3); }
+
+.vol-section { width: 100%; max-width: 340px; }
+.vol-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 7px;
+  cursor: pointer; transition: all .2s;
+}
+.vol-card:hover { border-color: var(--green); }
+.vol-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.vol-info { flex: 1; }
+.vol-name { font-size: 12px; font-weight: 600; }
+.vol-detail { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.vol-status { font-size: 10px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+/* ═══ ELDERLY ═══ */
+.elderly-page { flex: 1; overflow-y: auto; }
+.elderly-hero {
+  background: linear-gradient(160deg, #1a1000, var(--bg));
+  padding: 20px; border-bottom: 1px solid var(--border);
+}
+.elderly-hero h2 { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--amber); margin-bottom: 4px; }
+.elderly-hero p { font-size: 12px; color: var(--text2); line-height: 1.7; }
+.elderly-content { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.eld-stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.eld-stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px; text-align: center; cursor: pointer; transition: all .2s;
+}
+.eld-stat:hover { border-color: var(--amber); }
+.eld-stat .esi { font-size: 22px; margin-bottom: 4px; }
+.eld-stat .esn { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--amber); }
+.eld-stat .esl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+.eld-list { display: flex; flex-direction: column; gap: 8px; }
+.eld-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; display: flex; align-items: flex-start; gap: 11px; cursor: pointer; transition: all .2s;
+}
+.eld-item:hover { border-color: var(--amber); }
+.eld-ico { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+.eld-info { flex: 1; }
+.eld-name { font-size: 13px; font-weight: 600; }
+.eld-desc { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.6; }
+.eld-dist { font-size: 11px; color: var(--amber); font-weight: 700; font-family: var(--font-mono); flex-shrink: 0; }
+.eld-chips { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+.eld-chip {
+  font-size: 9px; padding: 2px 7px; border-radius: 99px; font-weight: 600;
+  background: rgba(255,171,64,.1); color: var(--amber); border: 1px solid rgba(255,171,64,.2);
+}
+
+/* ═══ QR ═══ */
+.qr-page { flex: 1; overflow-y: auto; }
+.qr-hero {
+  background: linear-gradient(160deg, #0a1d2a, var(--bg));
+  padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.qr-box { background: #fff; border-radius: 14px; padding: 12px; width: 146px; height: 146px; display: flex; align-items: center; justify-content: center; }
+.qr-loc { font-family: var(--font-display); font-size: 18px; font-weight: 700; text-align: center; }
+.qr-sub { font-size: 11px; color: var(--text3); text-align: center; }
+.qr-scan-btn { padding: 10px 28px; border-radius: var(--radius-sm); background: var(--cyan); border: none; color: #000; font-weight: 700; font-size: 13px; cursor: pointer; font-family: var(--font); }
+.qr-list { padding: 14px; display: flex; flex-direction: column; gap: 7px; }
+.qr-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 13px; display: flex; align-items: center; gap: 11px; cursor: pointer; transition: all .2s; }
+.qr-item:hover { border-color: var(--cyan); }
+.qr-item-icon { font-size: 18px; width: 32px; text-align: center; }
+.qr-item-name { font-size: 12px; font-weight: 600; flex: 1; }
+.qr-item-id { font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
+
+/* ═══ SETTINGS ═══ */
+.settings-page { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.sg { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.si-row {
+  display: flex; align-items: center; gap: 11px; padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.si-row:last-child { border-bottom: none; }
+.si-ico { font-size: 18px; width: 26px; text-align: center; flex-shrink: 0; }
+.si-info { flex: 1; }
+.si-title { font-size: 13px; font-weight: 500; }
+.si-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.toggle { width: 40px; height: 22px; border-radius: 99px; background: var(--surface3); position: relative; cursor: pointer; transition: background .25s; flex-shrink: 0; border: 1px solid var(--border2); }
+.toggle.on { background: var(--cyan); border-color: var(--cyan); }
+.toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .25s; }
+.toggle.on::after { left: 20px; }
+
+/* ═══ MODAL ═══ */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 400;
+  display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border-radius: 22px 22px 0 0; padding: 16px 18px;
+  width: 100%; border-top: 1px solid var(--border2);
+  transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+  max-height: 80vh; overflow-y: auto;
+}
+.modal-bg.open .modal { transform: none; }
+.modal-handle { width: 32px; height: 3px; background: var(--border2); border-radius: 99px; margin: 0 auto 14px; }
+.modal-icon { font-size: 36px; margin-bottom: 6px; }
+.modal-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.modal-body { font-size: 13px; color: var(--text2); line-height: 1.75; }
+.modal-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.modal-tag { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+.m-btn { flex: 1; padding: 11px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.m-btn:hover { background: var(--surface3); }
+.m-btn.primary { background: var(--cyan); border-color: var(--cyan); color: #000; }
+.m-btn.primary:hover { opacity: .85; }
+
+/* ═══ ALERT PANEL ═══ */
+.alert-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(320px, 100vw);
+  background: var(--surface); border-left: 1px solid var(--border2);
+  z-index: 300; transform: translateX(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column; padding: 16px;
+}
+.alert-panel.open { transform: none; }
+.alert-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.alert-panel-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; }
+.alert-close { font-size: 20px; cursor: pointer; color: var(--text3); }
+.alert-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.alert-item { border-radius: var(--radius-sm); padding: 11px 12px; border: 1px solid; }
+.alert-item.warn { background: rgba(255,171,64,.07); border-color: rgba(255,171,64,.25); }
+.alert-item.info { background: rgba(0,212,232,.07); border-color: rgba(0,212,232,.25); }
+.alert-item.danger { background: rgba(255,82,82,.07); border-color: rgba(255,82,82,.25); }
+.alert-item-head { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.alert-item-body { font-size: 11px; color: var(--text2); line-height: 1.5; }
+.alert-time { font-size: 9px; color: var(--text3); margin-top: 4px; font-family: var(--font-mono); }
+
+/* ═══ TOAST ═══ */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 11px; padding: 9px 16px; font-size: 12px; z-index: 500;
+  opacity: 0; transition: all .3s; white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5); pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+
+
+/* ═══ CREATIVE CAMPUS UPGRADE ═══ */
+.campus-hero-card {
+  pointer-events: all;
+  background: linear-gradient(135deg, rgba(14,165,233,.20), rgba(168,85,247,.14), rgba(34,197,94,.10));
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 22px;
+  padding: 12px 14px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.32);
+  backdrop-filter: blur(18px);
+}
+.campus-hero-title { font-family: var(--font-display); font-size: 17px; font-weight: 800; letter-spacing: -.4px; }
+.campus-hero-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+.campus-mini-stats { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.campus-mini-stat { font-size:10px; font-weight:700; padding:4px 8px; border-radius:99px; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.13); }
+.feature-strip { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:6px; pointer-events: all; }
+.feature-tile { border:1px solid rgba(255,255,255,.16); border-radius:18px; padding:10px 8px; background:rgba(15,23,42,.86); backdrop-filter: blur(14px); box-shadow:0 12px 26px rgba(0,0,0,.24); cursor:pointer; transition:.22s; }
+.feature-tile:hover { transform: translateY(-2px); border-color: var(--cyan); }
+.feature-tile .ft-ico { font-size:20px; }
+.feature-tile .ft-title { font-size:10px; font-weight:800; margin-top:4px; }
+.feature-tile .ft-sub { font-size:9px; color:var(--text3); margin-top:2px; }
+.route-select-row { display:flex; gap:7px; pointer-events:all; }
+.route-select { flex:1; padding:9px 12px; border-radius:12px; border:1px solid var(--border2); background:rgba(15,23,42,.92); color:var(--text); font-family:var(--font); outline:none; }
+.route-select:focus { border-color:var(--cyan); }
+.buggy-panel, .parking-panel {
+  background: linear-gradient(135deg, rgba(245,158,11,.15), rgba(34,211,238,.10));
+  border:1px solid rgba(255,255,255,.16); border-radius:22px; padding:14px;
+  box-shadow:0 15px 35px rgba(0,0,0,.22);
+}
+.buggy-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.buggy-card { background:rgba(15,23,42,.8); border:1px solid rgba(255,255,255,.13); border-radius:16px; padding:11px; cursor:pointer; }
+.buggy-card:hover { border-color:var(--amber); }
+.buggy-title { font-weight:800; font-size:12px; }
+.buggy-sub { color:var(--text2); font-size:10px; line-height:1.5; margin-top:3px; }
+.campus-action-btn { width:100%; margin-top:10px; padding:11px; border-radius:14px; border:0; background:linear-gradient(135deg, var(--amber), #ffd166); color:#111827; font-weight:900; cursor:pointer; font-family:var(--font); }
+.campus-action-btn.teal { background:linear-gradient(135deg, var(--cyan), #67e8f9); }
+.route-destination { color:var(--cyan); font-weight:800; }
+@media (max-width: 520px) { .feature-strip { grid-template-columns:1fr 1fr 1fr; } .campus-hero-card{padding:10px} .campus-hero-title{font-size:15px} .map-legend{display:none} }
+
+
+/* ═══ V3: SEPARATE MAP PANEL FIX ═══ */
+#page-map.page.active {
+  display: grid !important;
+  grid-template-columns: 380px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  min-height: 0;
+  background: #071018;
+}
+#page-map > #map {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+  border-left: 1px solid rgba(255,255,255,.12);
+}
+#page-map .map-overlay {
+  position: relative !important;
+  grid-column: 1;
+  grid-row: 1;
+  inset: auto !important;
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  pointer-events: all;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(8,12,20,.98), rgba(13,18,32,.96));
+  border-right: 1px solid rgba(255,255,255,.12);
+  box-shadow: 18px 0 50px rgba(0,0,0,.30);
+}
+#page-map .map-overlay::-webkit-scrollbar { width: 6px; }
+#page-map .map-overlay::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 99px; }
+#page-map .campus-hero-card {
+  background: linear-gradient(135deg, rgba(34,211,238,.22), rgba(99,102,241,.17), rgba(16,185,129,.12));
+}
+#page-map .route-select-row,
+#page-map .search-row { flex-direction: column; }
+#page-map .feature-strip { grid-template-columns: 1fr; }
+#page-map .feature-tile { display:flex; align-items:center; gap:12px; padding:12px; }
+#page-map .feature-tile .ft-ico { font-size:24px; }
+#page-map .feature-tile .ft-title { margin-top:0; font-size:12px; }
+#page-map .feature-tile .ft-sub { font-size:10px; }
+#page-map .map-pills { gap:8px; }
+#page-map .map-pill { padding:8px 11px; background: rgba(255,255,255,.07); }
+#page-map .campus-focus { grid-template-columns: 1fr; }
+#page-map .route-bar {
+  position: absolute;
+  left: 398px;
+  right: 16px;
+  bottom: 14px;
+  z-index: 50;
+  border: 1px solid rgba(34,211,238,.18);
+  border-radius: 18px;
+  background: rgba(7,13,24,.94);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 50px rgba(0,0,0,.42);
+}
+#page-map .map-legend { right: 10px; bottom: 10px; }
+#page-map .const-strip { top: 0; right: 0; z-index: 60; }
+.map-focus-floating {
+  position: absolute;
+  top: 14px;
+  left: 396px;
+  z-index: 70;
+  border: 1px solid rgba(34,211,238,.35);
+  background: rgba(7,13,24,.90);
+  color: var(--text);
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.map-focus-floating:hover { border-color: var(--cyan); color: var(--cyan); }
+#page-map.map-focus-mode { grid-template-columns: 0 minmax(0,1fr); }
+#page-map.map-focus-mode .map-overlay {
+  padding: 0;
+  border: 0;
+  transform: translateX(-100%);
+  overflow: hidden;
+}
+#page-map.map-focus-mode > #map { grid-column: 2; border-left:0; }
+#page-map.map-focus-mode .map-focus-floating { left: 14px; }
+#page-map.map-focus-mode .route-bar { left: 16px; }
+@media (max-width: 900px) {
+  #page-map.page.active { display:flex !important; flex-direction:column; }
+  #page-map .map-overlay { height: auto; max-height: 42vh; border-right:0; border-bottom:1px solid rgba(255,255,255,.12); }
+  #page-map > #map { flex:1; min-height: 58vh; border-left:0; }
+  #page-map .feature-strip { grid-template-columns: repeat(3, 1fr); }
+  #page-map .feature-tile { display:block; }
+  #page-map .route-bar { left:10px; right:10px; bottom:10px; }
+  .map-focus-floating { left: 12px; top: calc(42vh + 12px); }
+  #page-map.map-focus-mode .map-overlay { display:none; }
+  #page-map.map-focus-mode > #map { min-height: 100%; }
+  #page-map.map-focus-mode .map-focus-floating { top: 12px; left: 12px; }
+}
+
+/* ═══ LEAFLET OVERRIDES ═══ */
+.leaflet-container { background: #0a1018 !important; }
+.leaflet-tile { filter: brightness(.55) saturate(.6) hue-rotate(195deg); }
+.leaflet-control-attribution { display: none !important; }
+.leaflet-control-zoom a {
+  background: var(--surface) !important; color: var(--text) !important;
+  border-color: var(--border2) !important;
+}
+
+/* CUSTOM MARKERS */
+.m-base { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid; cursor: pointer; background: var(--surface); transition: transform .2s; }
+.m-base:hover { transform: scale(1.18); }
+.you-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 4px rgba(0,212,232,.25), 0 0 0 8px rgba(0,212,232,.1); animation: you-pulse 2s infinite; }
+@keyframes you-pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(0,212,232,.2), 0 0 0 8px rgba(0,212,232,.05); } 50% { box-shadow: 0 0 0 8px rgba(0,212,232,.15), 0 0 0 14px rgba(0,212,232,.03); } }
+.warn-marker { width: 32px; height: 32px; background: #1a1000; border: 2px solid var(--amber); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; animation: warn-flash 2s infinite; }
+@keyframes warn-flash { 0%,100% { border-color: var(--amber); } 50% { border-color: rgba(255,171,64,.4); } }
+.ramp-marker { position: relative; }
+.ramp-badge { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: var(--green); border-radius: 50%; border: 1.5px solid var(--surface); font-size: 7px; display: flex; align-items: center; justify-content: center; }
+
+/* Construction warning strip */
+.const-strip {
+  position: absolute; top: 0; right: 0; z-index: 20; padding: 4px 10px;
+  background: repeating-linear-gradient(45deg, var(--amber) 0, var(--amber) 10px, #000 10px, #000 20px);
+  font-size: 10px; font-weight: 700; color: #000; border-radius: 0 0 0 8px;
+  animation: const-blink 3s ease infinite; pointer-events: none;
+}
+@keyframes const-blink { 0%,100% { opacity:1; } 50% { opacity:.6; } }
+
+/* Ramp info bar */
+.ramp-bar {
+  background: rgba(0,230,118,.07); border-top: 1px solid rgba(0,230,118,.2);
+  padding: 8px 14px; display: flex; gap: 10px; align-items: center; flex-shrink: 0;
+}
+.ramp-bar-ico { font-size: 16px; }
+.ramp-bar-text { font-size: 11px; color: var(--green); flex: 1; line-height: 1.5; }
+
+/* Water outlet chip */
+.water-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600;
+  padding: 3px 9px; border-radius: 99px;
+  background: rgba(59,130,246,.1); color: #60a5fa; border: 1px solid rgba(59,130,246,.2);
+}
+
+
+/* ═══ UI UPGRADE: CAMPUS-SPECIFIC PREMIUM LOOK ═══ */
+:root{
+  --bg:#05070d;
+  --bg2:#07111f;
+  --surface:rgba(12,18,30,.92);
+  --surface2:rgba(22,31,48,.88);
+  --surface3:rgba(35,48,70,.9);
+  --border:rgba(255,255,255,.10);
+  --border2:rgba(255,255,255,.18);
+  --cyan:#38e8ff;
+  --cyan2:#11c8e7;
+  --green:#32f58d;
+  --amber:#ffc857;
+  --red:#ff4d6d;
+  --purple:#a78bfa;
+  --pink:#ff8cc6;
+  --text:#f8fbff;
+  --text2:#b8c5d8;
+  --text3:#7e8da3;
+  --radius:22px;
+  --radius-sm:15px;
+}
+
+body{
+  background:
+    radial-gradient(circle at top left, rgba(56,232,255,.16), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(50,245,141,.10), transparent 30%),
+    linear-gradient(145deg,#05070d 0%,#07111f 48%,#05070d 100%);
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.22;
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size:42px 42px;
+  mask-image:linear-gradient(to bottom, black, transparent 82%);
+  z-index:0;
+}
+
+#splash{
+  background:
+    radial-gradient(circle at 50% 36%, rgba(56,232,255,.18), transparent 32%),
+    linear-gradient(160deg,#05070d,#0b1220 55%,#05070d);
+}
+.splash-logo-inner,.brand-logo{
+  box-shadow:0 0 26px rgba(56,232,255,.18), inset 0 1px 0 rgba(255,255,255,.14);
+}
+.splash-wordmark,.brand-name{
+  text-shadow:0 0 22px rgba(56,232,255,.12);
+}
+.topbar{
+  padding:12px 16px;
+  background:rgba(8,13,23,.82);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(56,232,255,.13);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.brand-logo{
+  width:42px;height:42px;border-radius:15px;
+  background:linear-gradient(145deg,rgba(56,232,255,.20),rgba(50,245,141,.08));
+}
+.brand-name{font-size:19px;}
+.brand-sub{color:var(--text2);font-weight:700;letter-spacing:.9px;}
+.pill-btn,.fs-btn,.cat-chip,.map-pill{
+  min-height:34px;
+  border-color:rgba(255,255,255,.13);
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(14px);
+}
+.pill-btn:hover,.cat-chip:hover,.map-pill:hover,.fs-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 24px rgba(0,0,0,.25);
+}
+.tabs{
+  background:rgba(8,13,23,.72);
+  backdrop-filter:blur(16px);
+  padding:4px 7px 5px;
+  gap:6px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.tab{
+  border:1px solid transparent;
+  border-bottom:1px solid transparent;
+  border-radius:16px;
+  min-width:66px;
+  padding:8px 7px;
+}
+.tab.active{
+  color:#061015;
+  background:linear-gradient(135deg,var(--cyan),#7cf9d7);
+  border-color:rgba(255,255,255,.18);
+  box-shadow:0 10px 26px rgba(56,232,255,.20);
+}
+.tab.sos-tab.active{
+  color:#fff;
+  background:linear-gradient(135deg,#ff315a,#ff7a59);
+  box-shadow:0 10px 26px rgba(255,77,109,.22);
+}
+.map-overlay{padding:14px;gap:10px;}
+.search-row{
+  background:rgba(4,8,14,.38);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:20px;
+  padding:7px;
+  backdrop-filter:blur(18px);
+  box-shadow:0 16px 36px rgba(0,0,0,.30);
+}
+.s-input{
+  min-height:46px;
+  background:rgba(255,255,255,.06);
+  border-color:rgba(255,255,255,.13);
+  border-radius:15px;
+  font-size:14px;
+}
+.s-btn,.qr-scan-btn,.m-btn.primary{
+  background:linear-gradient(135deg,var(--cyan),#7cf9d7);
+  box-shadow:0 12px 28px rgba(56,232,255,.18);
+  border:none;
+}
+.campus-focus{
+  pointer-events:all;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.campus-chip{
+  background:rgba(8,13,23,.75);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:17px;
+  padding:10px;
+  backdrop-filter:blur(16px);
+  box-shadow:0 12px 26px rgba(0,0,0,.22);
+}
+.campus-chip b{display:block;font-size:15px;color:var(--text);font-family:var(--font-display);}
+.campus-chip span{display:block;font-size:10px;color:var(--text3);margin-top:2px;}
+.legend-box,.route-bar,.ramp-bar,.fac-card,.ni,.v-transcript,.v-cmd,.sos-banner,.sos-opt,.vol-card,.eld-stat,.eld-item,.qr-item,.sg,.modal,.alert-panel,.alert-item{
+  background:rgba(12,18,30,.82);
+  backdrop-filter:blur(18px);
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 14px 35px rgba(0,0,0,.24);
+}
+.fac-card,.ni,.eld-item,.qr-item,.sos-opt,.vol-card{
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,background .22s ease;
+}
+.fac-card:hover,.ni:hover,.eld-item:hover,.qr-item:hover,.sos-opt:hover,.vol-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 20px 42px rgba(0,0,0,.30), 0 0 0 1px rgba(56,232,255,.06);
+}
+.fac-grid{gap:12px;}
+.fc-icon,.ni-ico,.eld-ico,.qr-item-icon{filter:drop-shadow(0 8px 14px rgba(0,0,0,.28));}
+.sec-label{color:var(--cyan);font-weight:800;}
+.sec-label::after{background:linear-gradient(90deg,rgba(56,232,255,.35),transparent);}
+.route-bar{
+  margin:0 12px 12px;
+  border:1px solid rgba(56,232,255,.16);
+  border-radius:22px;
+}
+.rb-step{line-height:1.6;}
+.elderly-hero,.qr-hero{
+  background:
+    radial-gradient(circle at top right,rgba(255,200,87,.16),transparent 34%),
+    linear-gradient(160deg,rgba(255,200,87,.08),rgba(5,7,13,.9));
+}
+.sos-btn{
+  background:radial-gradient(circle at 35% 25%,#ff6b7f,#4a0711 62%,#190207);
+  box-shadow:0 0 40px rgba(255,77,109,.38),0 0 0 14px rgba(255,77,109,.06);
+}
+.v-orb{
+  background:radial-gradient(circle at 35% 28%,rgba(56,232,255,.32),rgba(4,8,14,.95));
+}
+.leaflet-tile{filter:brightness(.48) saturate(.65) hue-rotate(180deg) contrast(1.1);}
+.toast{
+  bottom:28px;
+  background:rgba(13,20,33,.95);
+  border-color:rgba(56,232,255,.22);
+  backdrop-filter:blur(18px);
+}
+
+@media (max-width: 640px){
+  .topbar{padding:10px 10px;}
+  .brand-name{font-size:16px;}
+  .brand-logo{width:36px;height:36px;}
+  .pill-btn{height:32px;padding:0 9px;font-size:10px;}
+  .campus-focus{grid-template-columns:1fr 1fr 1fr;}
+  .campus-chip{padding:8px 6px;text-align:center;}
+  .campus-chip b{font-size:12px;}
+  .campus-chip span{font-size:8px;}
+  .map-legend{display:none;}
+  .search-row{padding:5px;}
+  .s-input{min-height:42px;font-size:12px;}
+  .s-btn{padding:9px 12px;}
+  .fac-grid{grid-template-columns:1fr;}
+  .tabs{gap:4px;}
+  .tab{min-width:58px;font-size:8px;}
+}
+
+
+/* ═══ CRITICAL FIX: keep Map dashboard ONLY on Map tab ═══
+   Earlier .map-page had display:flex, which overrode .page {display:none}.
+   This forces the map section to stay hidden when Facilities/Elderly/Voice/SOS/QR/Settings are open. */
+.page.map-page {
+  display: none !important;
+}
+.page.map-page.active {
+  display: flex !important;
+}
+@media (min-width: 901px) {
+  #page-map.page.map-page.active {
+    display: grid !important;
+  }
+}
+
+
+/* ═══ HACKATHON FUTURE FEATURES ADD-ON ═══ */
+.smart-addons { pointer-events: all; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 2px; }
+.smart-card { background: rgba(12,18,30,.86); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 11px; cursor: pointer; backdrop-filter: blur(16px); box-shadow: 0 14px 28px rgba(0,0,0,.24); transition: .22s; }
+.smart-card:hover { transform: translateY(-2px); border-color: var(--cyan); }
+.smart-card .smart-ico { font-size: 21px; }
+.smart-card .smart-title { font-size: 11px; font-weight: 900; margin-top: 5px; color: var(--text); }
+.smart-card .smart-sub { font-size: 9px; color: var(--text3); line-height: 1.35; margin-top: 2px; }
+.smart-card.danger:hover { border-color: var(--red); }
+.smart-card.safe:hover { border-color: var(--green); }
+.live-indicator { display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:99px; font-size:9px; font-weight:800; background:rgba(50,245,141,.10); border:1px solid rgba(50,245,141,.25); color:var(--green); }
+.live-indicator::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse-dot 1.4s infinite; }
+.ai-panel { background: linear-gradient(135deg, rgba(56,232,255,.13), rgba(167,139,250,.12)); border: 1px solid rgba(255,255,255,.14); border-radius: 22px; padding: 13px; box-shadow:0 16px 35px rgba(0,0,0,.22); }
+.ai-panel-title { font-family:var(--font-display); font-weight:900; font-size:14px; margin-bottom:4px; }
+.ai-panel-sub { color:var(--text2); font-size:11px; line-height:1.6; }
+.ai-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.ai-action { padding:10px; border-radius:15px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--text); font-family:var(--font); font-weight:800; font-size:11px; cursor:pointer; }
+.ai-action:hover { border-color:var(--cyan); }
+body.battery-mode .leaflet-tile { filter: brightness(.38) saturate(.4) !important; }
+body.battery-mode * { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+body.night-safe .topbar, body.night-safe .tabs { box-shadow: 0 0 28px rgba(50,245,141,.16); }
+body.night-safe .route-bar { border-color: rgba(50,245,141,.35) !important; }
+@media (max-width: 900px){ .smart-addons{ grid-template-columns: repeat(2,1fr);} .ai-actions{grid-template-columns:1fr;} }
+
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-ring">
+    <div class="splash-logo-inner">♿</div>
+  </div>
+  <div class="splash-wordmark">Access<span>Campus</span></div>
+  <div class="splash-tagline">Navigate Without Barriers</div>
+  <div class="splash-univ">Parul University, Goa</div>
+  <div class="splash-progress"><div class="splash-fill"></div></div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo">♿</div>
+      <div>
+        <div class="brand-name">Access<span>Campus</span></div>
+        <div class="brand-sub">Parul University Goa</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="pill-btn" onclick="toggleFsBar()">🔤 Text</div>
+      <div class="pill-btn" onclick="toggleAlerts()">🔔 <span id="alertCount" style="color:var(--red);font-weight:700">5</span></div>
+      <div class="pill-btn danger" onclick="switchPage('sos')">🆘 SOS</div>
+    </div>
+  </div>
+
+  <!-- FONT SIZE BAR -->
+  <div class="fs-bar hidden" id="fsBar">
+    <span class="fs-label">Text Size</span>
+    <button class="fs-btn active" onclick="setFs(1, this)">A</button>
+    <button class="fs-btn" onclick="setFs(1.15, this)" style="font-size:13px">A+</button>
+    <button class="fs-btn" onclick="setFs(1.3, this)" style="font-size:15px">A++</button>
+    <button class="fs-btn" onclick="setFs(1.5, this)" style="font-size:17px">A+++</button>
+    <span style="margin-left:auto;font-size:10px;color:var(--text3)">For low vision</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-page="map" onclick="switchPage('map')"><span class="ti">🗺️</span>Map</div>
+    <div class="tab" data-page="facilities" onclick="switchPage('facilities')"><span class="ti">🏢</span>Facilities</div>
+    <div class="tab" data-page="elderly" onclick="switchPage('elderly')"><span class="ti">🧓</span>Elderly</div>
+    <div class="tab" data-page="voice" onclick="switchPage('voice')"><span class="ti">🎙️</span>Voice</div>
+    <div class="tab sos-tab" data-page="sos" onclick="switchPage('sos')"><span class="ti">🆘</span>SOS<div class="tab-badge"></div></div>
+    <div class="tab" data-page="qr" onclick="switchPage('qr')"><span class="ti">📷</span>QR</div>
+    <div class="tab" data-page="settings" onclick="switchPage('settings')"><span class="ti">⚙️</span>Settings</div>
+  </div>
+
+  <!-- ══════ MAP PAGE ══════ -->
+  <div class="page active map-page" id="page-map">
+    <div class="const-strip">⚠ CONSTRUCTION ZONE ACTIVE</div>
+    <button class="map-focus-floating" id="focusMapBtn" onclick="toggleMapFocus()">🗺️ Full Map</button>
+    <div id="map" style="flex:1"></div>
+    <div class="map-overlay">
+      <div class="campus-hero-card">
+        <div class="campus-hero-title">Parul Campus Access Dashboard</div>
+        <div class="campus-hero-sub">Live campus navigation for Parul University Goa: Entrance, Admission Cell, Hostel, Fountain, Academic Block, Canteen and Bank.</div>
+        <div class="campus-mini-stats"><span class="campus-mini-stat">♿ 6 ramps</span><span class="campus-mini-stat">🛺 Buggy help</span><span class="campus-mini-stat">🅿️ Reserved parking</span><span class="campus-mini-stat">🎙️ Voice routes</span></div>
+      </div>
+      <div class="route-select-row">
+        <select class="route-select" id="fromSelect"><option value="you">📍 My Location</option><option value="entrance">Main Entrance</option><option value="admission">Admission Cell</option><option value="hostel">Hostel Block</option><option value="fountain">Fountain Court</option><option value="acad_a">Academic Block A</option><option value="cafeteria">Canteen</option><option value="bank">Bank</option><option value="library">Library</option></select>
+        <select class="route-select" id="toSelect" onchange="routeToLocation(this.value)"><option value="fountain">To: Fountain Court</option><option value="admission">To: Admission Cell</option><option value="hostel">To: Hostel Block</option><option value="acad_a">To: Academic Block A</option><option value="acad_b">To: Academic Block B</option><option value="cafeteria">To: Canteen</option><option value="bank">To: Bank</option><option value="library">To: Library</option><option value="medical">To: Medical Centre</option><option value="parking_elderly">To: Reserved Parking</option><option value="buggy_stop">To: Buggy Stop</option></select>
+      </div>
+      <div class="feature-strip">
+        <div class="feature-tile" onclick="requestBuggy()"><div class="ft-ico">🛺</div><div class="ft-title">Book Buggy</div><div class="ft-sub">elderly support</div></div>
+        <div class="feature-tile" onclick="routeToLocation('parking_elderly')"><div class="ft-ico">🅿️</div><div class="ft-title">Reserved Parking</div><div class="ft-sub">near entrance</div></div>
+        <div class="feature-tile" onclick="routeToLocation('medical')"><div class="ft-ico">🏥</div><div class="ft-title">Medical Route</div><div class="ft-sub">fast accessible</div></div>
+      </div>
+      <div class="search-row">
+        <input class="s-input" id="searchInput" placeholder="Search buildings, ramps, elevators…" oninput="filterMap(this.value)"/>
+        <button class="s-btn" onclick="routeToLocation(document.getElementById('toSelect').value)">♿ Route</button>
+      </div>
+      <div class="map-pills" id="mapPills">
+        <div class="map-pill active" data-filter="wheelchair" onclick="togglePill(this)">♿ Wheelchair</div>
+        <div class="map-pill" data-filter="ramp" onclick="togglePill(this)">🏗️ Ramps</div>
+        <div class="map-pill" data-filter="elevator" onclick="togglePill(this)">🛗 Elevators</div>
+        <div class="map-pill" data-filter="water" onclick="togglePill(this)">💧 Water</div>
+        <div class="map-pill" data-filter="rest" onclick="togglePill(this)">🌿 Rest Areas</div>
+        <div class="map-pill warn" data-filter="construction" onclick="togglePill(this)">⚠️ Construction</div>
+        <div class="map-pill" data-filter="medical" onclick="togglePill(this)">🏥 Medical</div>
+        <div class="map-pill" data-filter="buggy" onclick="togglePill(this)">🛺 Buggy</div>
+        <div class="map-pill" data-filter="parking" onclick="togglePill(this)">🅿️ Parking</div>
+      </div>
+      <div class="campus-focus" aria-label="Campus accessibility summary">
+        <div class="campus-chip"><b>6</b><span>Ramp routes</span></div>
+        <div class="campus-chip"><b>8</b><span>Water points</span></div>
+        <div class="campus-chip"><b>24/7</b><span>Campus SOS</span></div>
+      </div>
+      <div class="smart-addons" aria-label="Smart hackathon features">
+        <div class="smart-card danger" onclick="smartHazardAlerts()"><div class="smart-ico">⚠️</div><div class="smart-title">Smart Hazard Alerts</div><div class="smart-sub">blocked paths, wet floors, crowd warnings</div></div>
+        <div class="smart-card" onclick="nearestHelp()"><div class="smart-ico">🤖</div><div class="smart-title">Nearest Help AI</div><div class="smart-sub">find volunteer, security or medical help</div></div>
+        <div class="smart-card safe" onclick="safeNightMode()"><div class="smart-ico">🌙</div><div class="smart-title">Night Safe Route</div><div class="smart-sub">lit paths + security desk priority</div></div>
+        <div class="smart-card danger" onclick="evacuationMode()"><div class="smart-ico">🚨</div><div class="smart-title">Evacuation Mode</div><div class="smart-sub">fast accessible exit route</div></div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <div class="legend-box">
+        <div class="legend-title">Legend</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div>Buildings</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Ramps / Accessible</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Elevators</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>Water Outlets</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Rest Areas</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Medical / SOS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Buggy / Parking</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber);border-radius:3px"></div>⚠ Construction</div>
+      </div>
+    </div>
+    <div class="ramp-bar" id="rampBar" style="display:none">
+      <div class="ramp-bar-ico">♿</div>
+      <div class="ramp-bar-text" id="rampBarText">Ramp detected nearby — accessible path available</div>
+    </div>
+    <div class="route-bar" id="routeBar">
+      <div class="rb-head">
+        <div class="rb-title" id="routeTitle">♿ Main Entrance → Library</div>
+        <div class="rb-meta">
+          <div class="rb-badge">Accessible</div>
+          <div class="rb-time">~6 min</div>
+          <div class="rb-close" onclick="document.getElementById('routeBar').classList.remove('show')">✕</div>
+        </div>
+      </div>
+      <div class="rb-steps" id="routeSteps">
+        <div class="rb-step">📍 Start at main entrance ramp (left side)</div>
+        <div class="rb-step">↑ Head north on accessible path (80m) — flat surface</div>
+        <div class="rb-step">🛗 Elevator available at Academic Block A if needed</div>
+        <div class="rb-step">⚠️ Avoid east path — construction active (PUG-CON-01)</div>
+        <div class="rb-step">↗️ Turn right — follow blue markers (30m)</div>
+        <div class="rb-step">💧 Water outlet on your left near Central Quad</div>
+        <div class="rb-step">🏁 Library accessible entrance on your right</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ FACILITIES PAGE ══════ -->
+  <div class="page" id="page-facilities">
+    <div class="scroller">
+      <div>
+        <div class="sec-label">Filter</div>
+        <div class="cat-scroll">
+          <div class="cat-chip active" onclick="filterFac('all',this)">All</div>
+          <div class="cat-chip" onclick="filterFac('ramp',this)">♿ Ramps</div>
+          <div class="cat-chip" onclick="filterFac('elevator',this)">🛗 Elevators</div>
+          <div class="cat-chip" onclick="filterFac('wc',this)">🚻 Restrooms</div>
+          <div class="cat-chip" onclick="filterFac('water',this)">💧 Water</div>
+          <div class="cat-chip" onclick="filterFac('rest',this)">🌿 Rest</div>
+          <div class="cat-chip" onclick="filterFac('medical',this)">🏥 Medical</div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-label">Quick Stats</div>
+        <div class="fac-grid">
+          <div class="fac-card" style="--c:var(--green)" onclick="openModal('♿','Ramps on Campus','6 accessible ramps — Main Entrance, Academic Block A (grade 7°), Academic Block B (grade 8°), Library (covered, grade 7°), Cafeteria (south side), Hostel Block. All have handrails on both sides and non-slip surfaces.','ramp')">
+            <div class="fc-icon">🏗️</div>
+            <div class="fc-name">Ramps</div>
+            <div class="fc-count">6 locations</div>
+            <div class="fc-status"><div class="sdot"></div>All clear</div>
+          </div>
+          <div class="fac-card" style="--c:var(--purple)" onclick="openModal('🛗','Elevators','2 elevators on campus — Academic Block A (G to F3) and Hostel Block (G to F4). Both fully operational. Braille buttons, audio announcements, and wide 90cm doors.','elevator')">
+            <div class="fc-icon">🛗</div>
+            <div class="fc-name">Elevators</div>
+            <div class="fc-count">2 operational</div>
+            <div class="fc-status"><div class="sdot"></div>All operational</div>
+          </div>
+          <div class="fac-card" style="--c:#60a5fa" onclick="openModal('💧','Water Outlets','8 accessible water outlets around campus — Central Quad, Library entrance, Academic Block A&B, Cafeteria, Sports Complex entrance, Hostel Block, Medical Centre. All at wheelchair-accessible height (85cm).','water')">
+            <div class="fc-icon">💧</div>
+            <div class="fc-name">Water Outlets</div>
+            <div class="fc-count">8 stations</div>
+            <div class="fc-status"><div class="sdot"></div>All functional</div>
+          </div>
+          <div class="fac-card" style="--c:var(--amber)" onclick="openModal('🌿','Rest Areas','5 dedicated rest areas — Central Quad (4 benches, shade), Library Garden (2 benches, water), Sports Lawn (6 benches), Academic Corridor (3 benches), Hostel Garden (4 benches). All wheelchair accessible.','rest')">
+            <div class="fc-icon">🌿</div>
+            <div class="fc-name">Rest Areas</div>
+            <div class="fc-count">5 areas · 19 benches</div>
+            <div class="fc-status"><div class="sdot"></div>Available</div>
+          </div>
+          <div class="fac-card" style="--c:var(--pink)" onclick="openModal('🚻','Accessible Restrooms','5 accessible restrooms — Academic Block GF, Library GF, Cafeteria, Hostel Block, Sports Complex. Grab bars, spacious stalls, emergency pull cords, tactile floor guides.','wc')">
+            <div class="fc-icon">🚻</div>
+            <div class="fc-name">Restrooms</div>
+            <div class="fc-count">5 accessible</div>
+            <div class="fc-status"><div class="sdot busy"></div>Cafeteria busy</div>
+          </div>
+          <div class="fac-card" style="--c:var(--red)" onclick="openModal('🏥','Medical Centre','On-campus health centre — open 8am–8pm daily, 24hr emergency. Wheelchair accessible. Defibrillator on premises. Tel: 18008909090.','medical')">
+            <div class="fc-icon">🏥</div>
+            <div class="fc-name">Medical</div>
+            <div class="fc-count">8am–8pm · 24hr ER</div>
+            <div class="fc-status"><div class="sdot"></div>Open now</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">Smart Real-Life Accessibility</div>
+        <div class="ai-panel">
+          <div class="ai-panel-title">🤖 Access AI Control Centre <span class="live-indicator">Live</span></div>
+          <div class="ai-panel-sub">Hackathon-ready assistive features for real campus use: crowd density, lost & found, medical shortcut, battery saver, wheelchair-priority routing and accessibility labels.</div>
+          <div class="ai-actions">
+            <button class="ai-action" onclick="updateCrowd()">👥 Live Crowd Density</button>
+            <button class="ai-action" onclick="openLostFound()">🎒 Lost & Found Assist</button>
+            <button class="ai-action" onclick="wheelchairPriorityRoute()">♿ Wheelchair Priority</button>
+            <button class="ai-action" onclick="medicalShortcut()">🏥 Fast Medical Route</button>
+            <button class="ai-action" onclick="batterySaverMode()">🔋 Battery Saver</button>
+            <button class="ai-action" onclick="improveAccessibilityLabels()">🏷️ Accessibility Labels</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-label">Nearby You — Sorted by Distance</div>
+        <div class="nearby-list" id="facList">
+          <div class="ni" data-type="ramp" onclick="openModal('♿','Academic Block A Ramp','Main entrance ramp. Grade 7°, width 120cm. Handrails both sides, non-slip surface, yellow tactile guide strips at edges. Covered overhead.','ramp')">
+            <div class="ni-ico">🏗️</div>
+            <div class="ni-info">
+              <div class="ni-name">Academic Block A — Ramp</div>
+              <div class="ni-detail">7° grade · 120cm wide · Covered · Tactile strips</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span><span class="ni-tag green">Ramp</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">38m</div><div class="ni-dir">↑ North</div></div>
+          </div>
+          <div class="ni" data-type="elevator" onclick="openModal('🛗','Academic Block Elevator','Ground to Floor 3. Located near main entrance of Academic Block A. Braille buttons, audio announcement, 90cm wide doors. Emergency phone inside.','elevator')">
+            <div class="ni-ico">🛗</div>
+            <div class="ni-info">
+              <div class="ni-name">Elevator — Academic Block A</div>
+              <div class="ni-detail">G to F3 · Braille · Wide doors · Emergency phone</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span><span class="ni-tag green">Operational</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">45m</div><div class="ni-dir">↑ NW</div></div>
+          </div>
+          <div class="ni" data-type="water" onclick="openModal('💧','Water Outlet — Academic Corridor','Accessible height 85cm. Motion sensor tap. Cool drinking water. Tactile indicator. Adjacent seating bench.','water')">
+            <div class="ni-ico">💧</div>
+            <div class="ni-info">
+              <div class="ni-name">Water Outlet — Academic Corridor</div>
+              <div class="ni-detail">Height 85cm · Motion sensor · Adjacent bench</div>
+              <div class="ni-tags"><span class="ni-tag">💧 Water</span><span class="ni-tag green">Functional</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">50m</div><div class="ni-dir">→ East</div></div>
+          </div>
+          <div class="ni" data-type="wc" onclick="openModal('🚻','Accessible Restroom — Academic Block','Ground floor. Emergency pull cord, grab bars, spacious 180×180cm stall. Tactile floor guide from corridor.','wc')">
+            <div class="ni-ico">🚻</div>
+            <div class="ni-info">
+              <div class="ni-name">Restroom — Academic Block</div>
+              <div class="ni-detail">GF · Grab bars · Tactile guide · Emergency cord</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">60m</div><div class="ni-dir">↑ N</div></div>
+          </div>
+          <div class="ni" data-type="rest" onclick="openModal('🌿','Central Quad Rest Area','4 shaded benches with backrests and armrests. Water outlet 5m away. Accessible path from all directions. Covered on 2 sides. Cooling fan in summer.','rest')">
+            <div class="ni-ico">🌿</div>
+            <div class="ni-info">
+              <div class="ni-name">Central Quad Rest Area</div>
+              <div class="ni-detail">4 benches · Shade · Water 5m · Cooling fan</div>
+              <div class="ni-tags"><span class="ni-tag amber">Rest</span><span class="ni-tag">💧 Water nearby</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">80m</div><div class="ni-dir">→ E</div></div>
+          </div>
+          <div class="ni" data-type="ramp" onclick="openModal('♿','Library Ramp','Main library entrance ramp. Grade 7°, covered. Handrails both sides. Non-slip textured concrete. Width 140cm — widest on campus.','ramp')">
+            <div class="ni-ico">🏗️</div>
+            <div class="ni-info">
+              <div class="ni-name">Library — Ramp</div>
+              <div class="ni-detail">7° grade · 140cm wide · Widest on campus</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span><span class="ni-tag green">Ramp</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">90m</div><div class="ni-dir">↑ NE</div></div>
+          </div>
+          <div class="ni" data-type="medical" onclick="openModal('🏥','Medical Centre','8am–8pm daily, 24hr emergency. Wheelchair accessible entrance east side. Defibrillator. Nurse on duty. Tel: 18008909090.','medical')">
+            <div class="ni-ico">🏥</div>
+            <div class="ni-info">
+              <div class="ni-name">Medical Centre</div>
+              <div class="ni-detail">8am–8pm · 24hr emergency · Defibrillator · Nurse on duty</div>
+              <div class="ni-tags"><span class="ni-tag red">Emergency</span><span class="ni-tag green">Open</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">140m</div><div class="ni-dir">→ SE</div></div>
+          </div>
+          <div class="ni" data-type="ramp" onclick="openModal('♿','Cafeteria Ramp','South entrance ramp. Grade 6°, handrails, non-slip surface. Near accessible parking bay.','ramp')">
+            <div class="ni-ico">🏗️</div>
+            <div class="ni-info">
+              <div class="ni-name">Cafeteria — Ramp (South)</div>
+              <div class="ni-detail">6° grade · Near accessible parking</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span><span class="ni-tag green">Ramp</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">160m</div><div class="ni-dir">↓ SE</div></div>
+          </div>
+          <div class="ni" data-type="ramp" onclick="openModal('♿','Hostel Block Ramp','West entrance ramp. Grade 8° (steepest on campus — handrail use recommended). Elevator 10m inside as alternative.','ramp')">
+            <div class="ni-ico">🏗️</div>
+            <div class="ni-info">
+              <div class="ni-name">Hostel Block — Ramp (West)</div>
+              <div class="ni-detail">8° grade · Steepest — handrail recommended · Elevator nearby</div>
+              <div class="ni-tags"><span class="ni-tag">♿ Accessible</span><span class="ni-tag amber">Steep</span></div>
+            </div>
+            <div class="ni-right"><div class="ni-dist">210m</div><div class="ni-dir">↑ NE</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ ELDERLY PAGE ══════ -->
+  <div class="page" id="page-elderly">
+    <div class="elderly-page">
+      <div class="elderly-hero">
+        <h2>🧓 Elderly-Friendly Guide</h2>
+        <p>Curated slow-pace routes, rest stops, water outlets, and support contacts for seniors and those needing extra care on campus.</p>
+      </div>
+      <div class="elderly-content">
+        <div class="sec-label">Campus at a Glance</div>
+        <div class="eld-stat-row">
+          <div class="eld-stat" onclick="showToast('19 benches across 5 rest areas')">
+            <div class="esi">🌿</div>
+            <div class="esn">19</div>
+            <div class="esl">Benches</div>
+          </div>
+          <div class="eld-stat" onclick="showToast('8 water outlets — all at accessible height')">
+            <div class="esi">💧</div>
+            <div class="esn">8</div>
+            <div class="esl">Water Pts</div>
+          </div>
+          <div class="eld-stat" onclick="showToast('6 ramps — gentlest grade is 6°')">
+            <div class="esi">♿</div>
+            <div class="esn">6</div>
+            <div class="esl">Ramps</div>
+          </div>
+        </div>
+
+        <div class="sec-label">Real-Life Support</div>
+        <div class="buggy-panel">
+          <div class="eld-name">🛺 Elderly & Mobility Buggy Service</div>
+          <div class="eld-desc">For seniors, injured students, wheelchair users, and visitors who cannot walk long distances. Pickups from Main Entrance, Reserved Parking, Academic Block A, Library, Hostel, and Medical Centre.</div>
+          <div class="buggy-grid">
+            <div class="buggy-card" onclick="requestBuggy('Main Entrance')"><div class="buggy-title">🛺 Nearest buggy</div><div class="buggy-sub">ETA 4 min · Driver Ramesh · Seat + wheelchair space</div></div>
+            <div class="buggy-card" onclick="routeToLocation('buggy_stop')"><div class="buggy-title">📍 Buggy stop</div><div class="buggy-sub">120m from you · Near Central Quad</div></div>
+          </div>
+          <button class="campus-action-btn" onclick="requestBuggy()">Request Buggy Pickup</button>
+        </div>
+        <div class="parking-panel">
+          <div class="eld-name">🅿️ Reserved Accessible Parking</div>
+          <div class="eld-desc">4 reserved bays near the Main Entrance and 2 near Medical Centre. Wider parking slots, flat path access, security desk nearby, and buggy pickup point beside parking.</div>
+          <button class="campus-action-btn teal" onclick="routeToLocation('parking_elderly')">Navigate to Reserved Parking</button>
+        </div>
+
+        <div class="sec-label">Rest Stops</div>
+        <div class="eld-list">
+          <div class="eld-item" onclick="openModal('🌿','Central Quad Rest Area','4 shaded benches with backrests and armrests. Water outlet 5m away. Covered on 2 sides. Level paved surface all around. Cooling fan in summer months.','rest')">
+            <div class="eld-ico">🌿</div>
+            <div class="eld-info">
+              <div class="eld-name">Central Quad</div>
+              <div class="eld-desc">4 benches, shade, water outlet 5m, cooling fan. Most accessible rest stop on campus.</div>
+              <div class="eld-chips"><span class="eld-chip">Shade</span><span class="eld-chip">Water</span><span class="eld-chip">Level path</span></div>
+            </div>
+            <div class="eld-dist">80m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('📚','Library Garden','2 benches in shaded garden. Water fountain nearby. Quiet area, ideal for resting between classes. Accessible path from library entrance.','rest')">
+            <div class="eld-ico">📚</div>
+            <div class="eld-info">
+              <div class="eld-name">Library Garden</div>
+              <div class="eld-desc">2 benches, shaded garden, water fountain. Quiet and cool — ideal rest spot.</div>
+              <div class="eld-chips"><span class="eld-chip">Quiet</span><span class="eld-chip">Shade</span><span class="eld-chip">Water</span></div>
+            </div>
+            <div class="eld-dist">95m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('🏛️','Academic Corridor Seating','3 benches inside air-conditioned corridor. Nearest to most classrooms. Next to water outlet.','rest')">
+            <div class="eld-ico">🏛️</div>
+            <div class="eld-info">
+              <div class="eld-name">Academic Corridor Seating</div>
+              <div class="eld-desc">3 benches, AC corridor, adjacent water outlet. Good midpoint rest stop.</div>
+              <div class="eld-chips"><span class="eld-chip">Air-conditioned</span><span class="eld-chip">Water</span></div>
+            </div>
+            <div class="eld-dist">55m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('⚽','Sports Lawn Benches','6 benches overlooking sports ground. Breezy and shaded by trees. Water outlet 10m.','rest')">
+            <div class="eld-ico">⚽</div>
+            <div class="eld-info">
+              <div class="eld-name">Sports Lawn Benches</div>
+              <div class="eld-desc">6 benches, breezy, shaded trees. Great for open air rest. Water 10m away.</div>
+              <div class="eld-chips"><span class="eld-chip">Breezy</span><span class="eld-chip">Trees</span><span class="eld-chip">6 seats</span></div>
+            </div>
+            <div class="eld-dist">200m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('🏠','Hostel Garden Benches','4 benches in garden area outside hostel. Available to all campus visitors. Water fountain nearby.','rest')">
+            <div class="eld-ico">🏠</div>
+            <div class="eld-info">
+              <div class="eld-name">Hostel Garden</div>
+              <div class="eld-desc">4 benches, garden setting. Peaceful and accessible. Water fountain 8m.</div>
+              <div class="eld-chips"><span class="eld-chip">Garden</span><span class="eld-chip">Water</span></div>
+            </div>
+            <div class="eld-dist">220m</div>
+          </div>
+        </div>
+
+        <div class="sec-label">Water Outlets</div>
+        <div class="eld-list">
+          <div class="eld-item" onclick="openModal('💧','Water Outlet — Academic Corridor','Height 85cm (wheelchair accessible). Motion sensor tap — no bending needed. Cool filtered water. Adjacent bench for sitting while drinking.','water')">
+            <div class="eld-ico">💧</div>
+            <div class="eld-info">
+              <div class="eld-name">Academic Corridor</div>
+              <div class="eld-desc">Height 85cm, motion sensor, filtered water, adjacent seating bench.</div>
+              <div class="eld-chips"><span class="eld-chip">85cm height</span><span class="eld-chip">Motion sensor</span><span class="eld-chip">Bench nearby</span></div>
+            </div>
+            <div class="eld-dist">50m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('💧','Water Outlet — Central Quad','Ground-level accessible fountain. Height 90cm. Shaded area. Part of rest zone.','water')">
+            <div class="eld-ico">💧</div>
+            <div class="eld-info">
+              <div class="eld-name">Central Quad</div>
+              <div class="eld-desc">Height 90cm. Shaded, part of main rest zone. 4 benches adjacent.</div>
+              <div class="eld-chips"><span class="eld-chip">Shaded</span><span class="eld-chip">Rest area</span></div>
+            </div>
+            <div class="eld-dist">85m</div>
+          </div>
+          <div class="eld-item" onclick="openModal('💧','Water Outlet — Library Entrance','Outside library entrance. Height 80cm, push-button lever (easier grip). Near ramp.','water')">
+            <div class="eld-ico">💧</div>
+            <div class="eld-info">
+              <div class="eld-name">Library Entrance</div>
+              <div class="eld-desc">Height 80cm, push-lever grip. Next to library ramp entrance.</div>
+              <div class="eld-chips"><span class="eld-chip">Easy grip</span><span class="eld-chip">Near ramp</span></div>
+            </div>
+            <div class="eld-dist">92m</div>
+          </div>
+        </div>
+
+        <div class="sec-label">Gentle Routes for Seniors</div>
+        <div class="eld-list">
+          <div class="eld-item" onclick="routeMode('slow');switchPage('map');setTimeout(drawRoute,400);showToast('🐢 Slow-pace route drawn!')">
+            <div class="eld-ico">🐢</div>
+            <div class="eld-info">
+              <div class="eld-name">Entrance → Library (Gentle)</div>
+              <div class="eld-desc">Longest but flattest route. Avoids steep ramps. 3 rest stops en route. ~8 min walk.</div>
+              <div class="eld-chips"><span class="eld-chip">Flat</span><span class="eld-chip">3 rest stops</span><span class="eld-chip">~8 min</span></div>
+            </div>
+            <div class="eld-dist">Go ›</div>
+          </div>
+          <div class="eld-item" onclick="switchPage('map');showToast('🐢 Cafeteria route drawn!')">
+            <div class="eld-ico">🍽️</div>
+            <div class="eld-info">
+              <div class="eld-name">Entrance → Cafeteria (Gentle)</div>
+              <div class="eld-desc">Passes Central Quad rest area and 2 water outlets. Grade never exceeds 6°.</div>
+              <div class="eld-chips"><span class="eld-chip">Max 6° grade</span><span class="eld-chip">Rest stop</span></div>
+            </div>
+            <div class="eld-dist">Go ›</div>
+          </div>
+        </div>
+
+        <div class="sec-label">Emergency Help</div>
+        <div class="eld-item" style="background:rgba(255,82,82,.05);border-color:rgba(255,82,82,.2);cursor:pointer" onclick="switchPage('sos')">
+          <div class="eld-ico">🆘</div>
+          <div class="eld-info">
+            <div class="eld-name" style="color:var(--red)">Emergency / I need help</div>
+            <div class="eld-desc">Tap to reach SOS page — alert security, call medical, or summon a volunteer instantly.</div>
+          </div>
+          <div class="eld-dist" style="color:var(--red)">SOS ›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ VOICE PAGE ══════ -->
+  <div class="page" id="page-voice">
+    <div class="voice-page">
+      <div class="v-orb-wrap">
+        <div class="v-ring"></div>
+        <div class="v-ring"></div>
+        <div class="v-ring"></div>
+        <div class="v-orb" id="vOrb" onclick="toggleVoice()">🎙️</div>
+      </div>
+      <div class="v-status" id="vStatus">Tap to start voice guidance</div>
+      <div class="v-sub">Hands-free navigation for wheelchair users, elderly, and visually impaired.</div>
+      <div class="v-transcript" id="vBox">Your spoken command will appear here…</div>
+      <div class="v-cmds">
+        <div class="sec-label">Try saying…</div>
+        <div class="v-cmd" onclick="simVoice('Take me to the library')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Take me to the library"</span><span class="vtag">navigate</span></div>
+        <div class="v-cmd" onclick="simVoice('Take me to cafeteria')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Take me to cafeteria"</span><span class="vtag">route</span></div>
+        <div class="v-cmd" onclick="simVoice('Book buggy for me')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Book buggy for me"</span><span class="vtag">buggy</span></div>
+        <div class="v-cmd" onclick="simVoice('Where is reserved parking')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Where is reserved parking"</span><span class="vtag">parking</span></div>
+        <div class="v-cmd" onclick="simVoice('Where is the nearest ramp?')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Where is the nearest ramp?"</span><span class="vtag">locate</span></div>
+        <div class="v-cmd" onclick="simVoice('Find rest area')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Find rest area"</span><span class="vtag">search</span></div>
+        <div class="v-cmd" onclick="simVoice('Where is water?')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Where is water?"</span><span class="vtag">search</span></div>
+        <div class="v-cmd" onclick="simVoice('I need help')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"I need help"</span><span class="vtag">SOS</span></div>
+        <div class="v-cmd" onclick="simVoice('Any construction nearby?')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Any construction nearby?"</span><span class="vtag">warn</span></div>
+        <div class="v-cmd" onclick="simVoice('Slow pace mode')"><span class="vico">🗣️</span><span style="flex:1;color:var(--text2)">"Slow pace mode"</span><span class="vtag">elderly</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ SOS PAGE ══════ -->
+  <div class="page sos-tab" id="page-sos">
+    <div class="sos-page">
+      <div class="sos-banner">
+        <h2>🆘 Emergency Help</h2>
+        <p>Press the button to instantly alert campus security. Volunteers and medical support available on campus.</p>
+      </div>
+      <a class="sos-btn" href="tel:18008909090">
+        <div class="sos-ring"></div>
+        <span class="si">🆘</span>
+        <span>CALL HELP</span>
+        <span style="font-size:10px;opacity:.8">1800-890-9090</span>
+      </a>
+      <div class="sos-grid">
+        <a class="sos-opt" href="tel:18008909090"><span class="oi">🔒</span><span class="ot">Security</span><span class="os">Campus desk</span></a>
+        <a class="sos-opt" href="tel:18008909090"><span class="oi">🏥</span><span class="ot">Medical</span><span class="os">Health centre</span></a>
+        <div class="sos-opt" onclick="switchPage('voice');showToast('🎙️ Voice SOS activated')"><span class="oi">🎙️</span><span class="ot">Voice SOS</span><span class="os">Speak to alert</span></div>
+        <a class="sos-opt" href="https://wa.me/918886800391?text=I+need+accessibility+help+at+Parul+University+Goa" target="_blank"><span class="oi">💬</span><span class="ot">WhatsApp</span><span class="os">Message help</span></a>
+      </div>
+      <div class="vol-section">
+        <div class="sec-label">Online Volunteers</div>
+        <div class="vol-card" onclick="showToast('📨 Alert sent to Priya!')">
+          <div class="vol-av" style="background:rgba(0,212,232,.15);color:var(--cyan)">P</div>
+          <div class="vol-info"><div class="vol-name">Priya Naik</div><div class="vol-detail">Near Library · Student Volunteer</div></div>
+          <div class="vol-status"><div class="sdot"></div><span style="color:var(--green)">Online</span></div>
+        </div>
+        <div class="vol-card" onclick="showToast('📨 Alert sent to Rahul!')">
+          <div class="vol-av" style="background:rgba(0,230,118,.15);color:var(--green)">R</div>
+          <div class="vol-info"><div class="vol-name">Rahul Dessai</div><div class="vol-detail">Academic Block · Student Volunteer</div></div>
+          <div class="vol-status"><div class="sdot"></div><span style="color:var(--green)">Online</span></div>
+        </div>
+        <div class="vol-card" onclick="showToast('📨 Alert queued for Meera — busy')">
+          <div class="vol-av" style="background:rgba(255,171,64,.15);color:var(--amber)">M</div>
+          <div class="vol-info"><div class="vol-name">Meera Fernandes</div><div class="vol-detail">Cafeteria area · Student Volunteer</div></div>
+          <div class="vol-status"><div class="sdot busy"></div><span style="color:var(--amber)">Busy · 5min</span></div>
+        </div>
+        <div class="vol-card" onclick="showToast('📨 Alert sent to Prof. Kamat!')">
+          <div class="vol-av" style="background:rgba(187,134,252,.15);color:var(--purple)">K</div>
+          <div class="vol-info"><div class="vol-name">Prof. R. Kamat</div><div class="vol-detail">Staff Coordinator · Admin Block</div></div>
+          <div class="vol-status"><div class="sdot"></div><span style="color:var(--green)">Online</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ QR PAGE ══════ -->
+  <div class="page" id="page-qr">
+    <div class="qr-page">
+      <div class="qr-hero">
+        <div class="qr-box">
+          <svg viewBox="0 0 122 122" xmlns="http://www.w3.org/2000/svg" width="122" height="122">
+            <rect width="122" height="122" fill="white"/>
+            <rect x="7" y="7" width="35" height="35" rx="3" fill="#000"/><rect x="12" y="12" width="25" height="25" rx="2" fill="white"/><rect x="17" y="17" width="15" height="15" rx="1" fill="#000"/>
+            <rect x="80" y="7" width="35" height="35" rx="3" fill="#000"/><rect x="85" y="12" width="25" height="25" rx="2" fill="white"/><rect x="90" y="17" width="15" height="15" rx="1" fill="#000"/>
+            <rect x="7" y="80" width="35" height="35" rx="3" fill="#000"/><rect x="12" y="85" width="25" height="25" rx="2" fill="white"/><rect x="17" y="90" width="15" height="15" rx="1" fill="#000"/>
+            <rect x="50" y="7" width="5" height="5" fill="#000"/><rect x="58" y="7" width="5" height="5" fill="#000"/><rect x="50" y="14" width="5" height="5" fill="#000"/>
+            <rect x="65" y="7" width="5" height="5" fill="#000"/><rect x="65" y="14" width="5" height="5" fill="#000"/><rect x="58" y="21" width="5" height="5" fill="#000"/>
+            <rect x="7" y="50" width="5" height="5" fill="#000"/><rect x="14" y="50" width="5" height="5" fill="#000"/><rect x="7" y="58" width="5" height="5" fill="#000"/>
+            <rect x="21" y="58" width="5" height="5" fill="#000"/><rect x="7" y="65" width="5" height="5" fill="#000"/><rect x="14" y="65" width="5" height="5" fill="#000"/>
+            <rect x="50" y="50" width="5" height="5" fill="#000"/><rect x="58" y="50" width="5" height="5" fill="#000"/><rect x="65" y="50" width="5" height="5" fill="#000"/>
+            <rect x="72" y="50" width="5" height="5" fill="#000"/><rect x="50" y="58" width="5" height="5" fill="#000"/><rect x="65" y="58" width="5" height="5" fill="#000"/>
+            <rect x="50" y="65" width="5" height="5" fill="#000"/><rect x="58" y="65" width="5" height="5" fill="#000"/>
+            <rect x="50" y="80" width="5" height="5" fill="#000"/><rect x="65" y="80" width="5" height="5" fill="#000"/>
+            <rect x="58" y="87" width="5" height="5" fill="#000"/><rect x="72" y="87" width="5" height="5" fill="#000"/>
+            <rect x="50" y="94" width="5" height="5" fill="#000"/><rect x="65" y="94" width="5" height="5" fill="#000"/>
+            <rect x="80" y="50" width="5" height="5" fill="#000"/><rect x="94" y="50" width="5" height="5" fill="#000"/>
+            <rect x="87" y="58" width="5" height="5" fill="#000"/><rect x="101" y="58" width="5" height="5" fill="#000"/>
+            <rect x="80" y="65" width="5" height="5" fill="#000"/><rect x="94" y="65" width="5" height="5" fill="#000"/>
+          </svg>
+        </div>
+        <div class="qr-loc" id="qrLocName">Main Entrance · PUG-001</div>
+        <div class="qr-sub">Scan at any campus QR point to get your location + route</div>
+        <button class="qr-scan-btn" onclick="showToast('📷 Camera — point at any campus QR code')">Scan QR Code</button>
+      </div>
+      <div class="qr-list">
+        <div class="sec-label">All QR Locations</div>
+        <div class="qr-item" onclick="selectQR('Main Entrance','PUG-001')"><span class="qr-item-icon">🏛️</span><div style="flex:1"><div class="qr-item-name">Main Entrance</div><div style="font-size:10px;color:var(--text3)">Ramp: left side · 2 water outlets</div></div><span class="qr-item-id">PUG-001</span></div>
+        <div class="qr-item" onclick="selectQR('Academic Block A','PUG-002')"><span class="qr-item-icon">🎓</span><div style="flex:1"><div class="qr-item-name">Academic Block A</div><div style="font-size:10px;color:var(--text3)">Ramp: main entrance · Elevator · Water outlet</div></div><span class="qr-item-id">PUG-002</span></div>
+        <div class="qr-item" onclick="selectQR('Academic Block B','PUG-003')"><span class="qr-item-icon">🎓</span><div style="flex:1"><div class="qr-item-name">Academic Block B</div><div style="font-size:10px;color:var(--text3)">Ramp: east entrance</div></div><span class="qr-item-id">PUG-003</span></div>
+        <div class="qr-item" onclick="selectQR('Library','PUG-004')"><span class="qr-item-icon">📚</span><div style="flex:1"><div class="qr-item-name">Library</div><div style="font-size:10px;color:var(--text3)">Ramp: widest (140cm) · Garden rest area · Water</div></div><span class="qr-item-id">PUG-004</span></div>
+        <div class="qr-item" onclick="selectQR('Cafeteria','PUG-005')"><span class="qr-item-icon">🍽️</span><div style="flex:1"><div class="qr-item-name">Cafeteria</div><div style="font-size:10px;color:var(--text3)">Ramp: south side · Accessible parking nearby</div></div><span class="qr-item-id">PUG-005</span></div>
+        <div class="qr-item" onclick="selectQR('Hostel Block','PUG-006')"><span class="qr-item-icon">🏠</span><div style="flex:1"><div class="qr-item-name">Hostel Block</div><div style="font-size:10px;color:var(--text3)">Ramp: west (steep) · Elevator inside · Garden benches</div></div><span class="qr-item-id">PUG-006</span></div>
+        <div class="qr-item" onclick="selectQR('Sports Complex','PUG-007')"><span class="qr-item-icon">⚽</span><div style="flex:1"><div class="qr-item-name">Sports Complex</div><div style="font-size:10px;color:var(--text3)">Accessible west entrance · Lawn benches</div></div><span class="qr-item-id">PUG-007</span></div>
+        <div class="qr-item" onclick="selectQR('Medical Centre','PUG-008')"><span class="qr-item-icon">🏥</span><div style="flex:1"><div class="qr-item-name">Medical Centre</div><div style="font-size:10px;color:var(--text3)">24hr emergency · Defibrillator · Wheelchair access east</div></div><span class="qr-item-id">PUG-008</span></div>
+        <div class="qr-item" onclick="selectQR('Construction Zone A','PUG-CON-01')" style="border-color:rgba(255,171,64,.25);background:rgba(255,171,64,.05)">
+          <span class="qr-item-icon">⚠️</span>
+          <div style="flex:1"><div class="qr-item-name" style="color:var(--amber)">Construction Zone A</div><div style="font-size:10px;color:var(--text3)">⚠ Detour via west path — adds 3 min</div></div>
+          <span class="qr-item-id">PUG-CON-01</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ SETTINGS PAGE ══════ -->
+  <div class="page" id="page-settings">
+    <div class="settings-page">
+      <div class="sec-label">Accessibility Profile</div>
+      <div class="sg">
+        <div class="si-row"><span class="si-ico">♿</span><div class="si-info"><div class="si-title">Wheelchair Mode</div><div class="si-sub">Avoid stairs, use ramps and elevators only</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">🐢</span><div class="si-info"><div class="si-title">Slow Pace / Elderly Mode</div><div class="si-sub">Shorter routes, more rest stops, gentler grades</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">👁️</span><div class="si-info"><div class="si-title">Visual Aid Mode</div><div class="si-sub">Higher contrast, larger tap targets</div></div><div class="toggle" onclick="toggleHighContrast(this)"></div></div>
+        <div class="si-row"><span class="si-ico">🔤</span><div class="si-info"><div class="si-title">Large Text Mode</div><div class="si-sub">Increase font size throughout the app</div></div><div class="toggle" onclick="toggleFsBar();this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">📳</span><div class="si-info"><div class="si-title">Haptic Feedback</div><div class="si-sub">Vibrate on turns and alerts</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="sec-label">Navigation</div>
+      <div class="sg">
+        <div class="si-row"><span class="si-ico">🔊</span><div class="si-info"><div class="si-title">Voice Guidance</div><div class="si-sub">Audio turn-by-turn directions (en-IN)</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">⚠️</span><div class="si-info"><div class="si-title">Construction Warnings</div><div class="si-sub">Alert when route passes construction zones</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">💧</span><div class="si-info"><div class="si-title">Water Outlet Reminders</div><div class="si-sub">Announce water outlets along route</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">🌿</span><div class="si-info"><div class="si-title">Rest Stop Suggestions</div><div class="si-sub">Suggest rest areas if journey &gt;10 min</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+      <div class="sec-label">Alerts</div>
+      <div class="sg">
+        <div class="si-row"><span class="si-ico">🛗</span><div class="si-info"><div class="si-title">Elevator Out-of-Service Alerts</div><div class="si-sub">Notify immediately if an elevator goes offline</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+        <div class="si-row"><span class="si-ico">🆘</span><div class="si-info"><div class="si-title">SOS Confirmation</div><div class="si-sub">Confirm before sending emergency alert</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      </div>
+
+      <div class="sec-label">Smart Modes</div>
+      <div class="sg">
+        <div class="si-row" onclick="safeNightMode()"><span class="si-ico">🌙</span><div class="si-info"><div class="si-title">Night Safe Route Mode</div><div class="si-sub">Prioritises lit paths, security desk and safer campus movement after evening.</div></div><div class="toggle"></div></div>
+        <div class="si-row" onclick="batterySaverMode()"><span class="si-ico">🔋</span><div class="si-info"><div class="si-title">Battery Saver Accessibility</div><div class="si-sub">Reduces motion and map brightness for longer emergency use.</div></div><div class="toggle"></div></div>
+      </div>
+      <div class="sec-label">About</div>
+      <div class="sg">
+        <div class="si-row"><span class="si-ico">🎓</span><div class="si-info"><div class="si-title">Parul University Goa</div><div class="si-sub">Near ONGC, Betul, Quepem — 403723</div></div></div>
+        <div class="si-row"><span class="si-ico">📱</span><div class="si-info"><div class="si-title">AccessCampus v2.0</div><div class="si-sub">Built at Hackathon 2025 · Goa</div></div></div>
+        <div class="si-row" onclick="showToast('🙌 Thank you for building for accessibility!')"><span class="si-ico">💙</span><div class="si-info"><div class="si-title">Built with purpose</div><div class="si-sub">Accessibility is not optional — it's fundamental.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ALERT PANEL -->
+<div class="alert-panel" id="alertPanel">
+  <div class="alert-panel-head">
+    <div class="alert-panel-title">🔔 Campus Alerts</div>
+    <div class="alert-close" onclick="toggleAlerts()">✕</div>
+  </div>
+  <div class="alert-list">
+    <div class="alert-item danger">
+      <div class="alert-item-head">⚠️ Construction Zone Active</div>
+      <div class="alert-item-body">East path between Academic Block B and Cafeteria is closed. Use west detour via Central Quad. Adds ~3 min.</div>
+      <div class="alert-time">Today · 08:00 AM</div>
+    </div>
+    <div class="alert-item warn">
+      <div class="alert-item-head">🛗 Elevator Maintenance</div>
+      <div class="alert-item-body">Hostel Block elevator scheduled maintenance 2–4 PM today. Use staircase or Academic Block elevator as alternate.</div>
+      <div class="alert-time">Today · 09:15 AM</div>
+    </div>
+    <div class="alert-item info">
+      <div class="alert-item-head">💧 Water Outlet — Cafeteria</div>
+      <div class="alert-item-body">Water outlet near cafeteria entrance temporarily out of service. Next nearest: Central Quad (80m).</div>
+      <div class="alert-time">Today · 10:30 AM</div>
+    </div>
+    <div class="alert-item warn">
+      <div class="alert-item-head">👥 Crowd Density High — Canteen</div>
+      <div class="alert-item-body">Canteen area is crowded right now. Wheelchair users and elderly visitors should use the Library Garden rest route or visit after 15 minutes.</div>
+      <div class="alert-time">Live · AI Crowd Monitor</div>
+    </div>
+    <div class="alert-item info">
+      <div class="alert-item-head">🌙 Night Safe Route Ready</div>
+      <div class="alert-item-body">After evening hours, routes prefer well-lit paths near security desk, medical centre, and main entrance.</div>
+      <div class="alert-time">Auto mode · 06:30 PM onward</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-icon" id="modalIcon"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-tags" id="modalTags"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="closeModal()">Close</button>
+      <button class="m-btn primary" onclick="routeToModal()">♿ Get Route</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ DATA
+const CENTER = [15.1448, 73.9620];
+let map, routeLine, youMarker, slowed = false;
+
+const locations = [
+  { id:'entrance', name:'Main Entrance', lat:15.1440, lng:73.9612, type:'entrance', icon:'🚪', desc:'Main entry gate of Parul University Goa. Security desk, accessible ramp, buggy support and reserved parking nearby.', hasRamp:true },
+  { id:'admission', name:'Admission Cell', lat:15.14455, lng:73.96075, type:'office', icon:'📝', desc:'Admission Cell on the left side after entering the campus. Accessible front entrance and waiting area.', hasRamp:true },
+  { id:'hostel', name:'Hostel Block', lat:15.14515, lng:73.96055, type:'hostel', icon:'🏠', desc:'Hostel block on the left-side campus path. Elevator support, ramp entry and garden-side rest point.', hasRamp:true },
+  { id:'fountain', name:'Fountain Court', lat:15.14475, lng:73.96185, type:'rest', icon:'⛲', desc:'Central fountain court and main rest zone. Best landmark for directions, benches, shade and water nearby.', hasRamp:false },
+  { id:'acad_a', name:'Academic Block', lat:15.14510, lng:73.96265, type:'building', icon:'🏫', desc:'Academic Block on the right side of campus. Ramp access, elevator, accessible WC and water point.', hasRamp:true },
+  { id:'acad_b', name:'Academic Extension', lat:15.14535, lng:73.96295, type:'building', icon:'🏢', desc:'Academic extension/lab side. Accessible path from Fountain Court and Academic Block.', hasRamp:true },
+  { id:'cafeteria', name:'Canteen', lat:15.14435, lng:73.96285, type:'food', icon:'🍽️', desc:'Campus canteen on the right side. Accessible side entry and nearby rest/water point.', hasRamp:true },
+  { id:'bank', name:'Campus Bank', lat:15.14465, lng:73.96310, type:'bank', icon:'🏦', desc:'Bank counter near canteen and academic side. Accessible flat route from Fountain Court.', hasRamp:true },
+  { id:'library', name:'Library', lat:15.14555, lng:73.96230, type:'building', icon:'📚', desc:'Library/study area. Wide ramp, quiet rest zone, accessible WC and water point.', hasRamp:true },
+  { id:'medical', name:'Medical Centre', lat:15.14415, lng:73.96235, type:'medical', icon:'🏥', desc:'Campus medical help point. Fast accessible route, SOS support and first-aid assistance.', hasRamp:false },
+
+  { id:'elev1', name:'Elevator — Academic Block', lat:15.14505, lng:73.96258, type:'elevator', icon:'🛗', desc:'Academic Block elevator. Braille buttons, audio announcement and wide doors.' },
+  { id:'elev2', name:'Elevator — Hostel', lat:15.14512, lng:73.96062, type:'elevator', icon:'🛗', desc:'Hostel elevator. Useful for elderly visitors and wheelchair users.' },
+
+  { id:'ramp1', name:'Main Gate Ramp', lat:15.14408, lng:73.96128, type:'ramp', icon:'♿', desc:'Ramp at campus entry. Tactile guide and handrail support.' },
+  { id:'ramp2', name:'Admission Cell Ramp', lat:15.14450, lng:73.96082, type:'ramp', icon:'♿', desc:'Accessible ramp to Admission Cell waiting area.' },
+  { id:'ramp3', name:'Academic Block Ramp', lat:15.14500, lng:73.96250, type:'ramp', icon:'♿', desc:'Main ramp to Academic Block. Recommended academic route.' },
+  { id:'ramp4', name:'Canteen Ramp', lat:15.14428, lng:73.96272, type:'ramp', icon:'♿', desc:'Gentle ramp to Canteen side entry.' },
+  { id:'ramp5', name:'Hostel Ramp', lat:15.14505, lng:73.96050, type:'ramp', icon:'♿', desc:'Hostel block ramp. Buggy drop can be requested nearby.' },
+  { id:'ramp6', name:'Library Ramp', lat:15.14548, lng:73.96222, type:'ramp', icon:'♿', desc:'Wide covered ramp to Library/study area.' },
+
+  { id:'wc1', name:'WC — Academic Block', lat:15.14500, lng:73.96275, type:'wc', icon:'🚻', desc:'Accessible restroom in Academic Block ground floor. Grab bars and emergency cord.' },
+  { id:'wc2', name:'WC — Canteen Side', lat:15.14435, lng:73.96272, type:'wc', icon:'🚻', desc:'Accessible restroom near canteen side.' },
+  { id:'wc3', name:'WC — Hostel', lat:15.14520, lng:73.96065, type:'wc', icon:'🚻', desc:'Accessible restroom in Hostel Block.' },
+
+  { id:'water1', name:'Water — Fountain Court', lat:15.14478, lng:73.96195, type:'water', icon:'💧', desc:'Accessible-height water point near central fountain.' },
+  { id:'water2', name:'Water — Academic Block', lat:15.14502, lng:73.96278, type:'water', icon:'💧', desc:'Water point near Academic Block entrance.' },
+  { id:'water3', name:'Water — Canteen', lat:15.14442, lng:73.96295, type:'water', icon:'💧', desc:'Water point near canteen seating.' },
+  { id:'water4', name:'Water — Hostel', lat:15.14510, lng:73.96080, type:'water', icon:'💧', desc:'Water point near Hostel path.' },
+
+  { id:'rest1', name:'Fountain Rest Zone', lat:15.14480, lng:73.96180, type:'rest', icon:'🌿', desc:'Main central rest area around the fountain. Benches, shade and water nearby.' },
+  { id:'rest2', name:'Admission Waiting Area', lat:15.14455, lng:73.96095, type:'rest', icon:'🌿', desc:'Waiting/rest space outside Admission Cell.' },
+  { id:'rest3', name:'Canteen Seating', lat:15.14425, lng:73.96298, type:'rest', icon:'🌿', desc:'Seating area near Canteen. Suitable for elderly users.' },
+  { id:'rest4', name:'Academic Corridor Seating', lat:15.14510, lng:73.96240, type:'rest', icon:'🌿', desc:'Indoor corridor seating near Academic Block.' },
+
+  { id:'const1', name:'⚠ Narrow Path Zone', lat:15.14520, lng:73.96170, type:'construction', icon:'🚧', desc:'Narrow path near central side. Wheelchair users should use Fountain Court detour.' },
+  { id:'const2', name:'⚠ Service Lane Detour', lat:15.14490, lng:73.96320, type:'construction', icon:'🚧', desc:'Avoid service lane near right side. Use main accessible path.' },
+
+  { id:'buggy_stop', name:'Buggy Pickup Stop', lat:15.14455, lng:73.96155, type:'buggy', icon:'🛺', desc:'Buggy pickup near entrance/Fountain route. Priority for elderly, injured students, visitors and wheelchair users.' },
+  { id:'parking_elderly', name:'Reserved Accessible Parking', lat:15.14418, lng:73.96142, type:'parking', icon:'🅿️', desc:'Reserved accessible parking bays near Main Entrance. Flat access to campus and buggy pickup nearby.' },
+];
+
+const markerColors = {
+  building:'#4a8ab0', entrance:'#e6a817', office:'#38e8ff', food:'#e6a817', bank:'#ffc857', hostel:'#58c4dc',
+  sports:'#4a8ab0', elevator:'#bb86fc', ramp:'#00e676', wc:'#f48fb1',
+  water:'#60a5fa', rest:'#ffab40', medical:'#ff5252', construction:'#ffab40', buggy:'#f59e0b', parking:'#f59e0b'
+};
+
+// ── MAP INIT
+function initMap() {
+  map = L.map('map', { zoomControl: true, attributionControl: false }).setView(CENTER, 17);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  // You-marker
+  const youIcon = L.divIcon({ className:'', html:'<div class="you-dot"></div>', iconSize:[14,14], iconAnchor:[7,7] });
+  youMarker = L.marker([15.14425, 73.96135], { icon: youIcon }).addTo(map);
+  youMarker.bindPopup('<b style="color:#00d4e8">📍 You are here</b><br><small style="color:#64748b">Parul University Goa</small>').openPopup();
+
+  // Place markers
+  locations.forEach(loc => {
+    const color = markerColors[loc.type] || '#00d4e8';
+    let html;
+    if (loc.type === 'construction') {
+      html = `<div class="warn-marker" title="${loc.name}">${loc.icon}</div>`;
+    } else if (loc.type === 'ramp') {
+      html = `<div class="m-base" style="border-color:${color}" title="${loc.name}"><div class="ramp-badge">♿</div>${loc.icon}</div>`;
+    } else {
+      html = `<div class="m-base" style="border-color:${color}" title="${loc.name}">${loc.icon}</div>`;
+    }
+    const icon = L.divIcon({ className:'', html, iconSize:[36,36], iconAnchor:[18,18] });
+    const marker = L.marker([loc.lat, loc.lng], { icon, rampData: loc }).addTo(map);
+
+    let rampNote = loc.hasRamp ? '<br><span style="color:#00e676;font-size:11px;font-weight:600">♿ Ramp available at this location</span>' : '';
+    let warnNote = loc.type === 'construction' ? '<br><span style="color:#ffab40;font-size:11px;font-weight:600">⚠ Use alternate route</span>' : '';
+
+    marker.bindPopup(
+      `<b style="font-size:14px">${loc.icon} ${loc.name}</b><br>
+       <span style="font-size:12px;color:#94a3b8">${loc.desc}</span>
+       ${rampNote}${warnNote}<br><br>
+       <a href="#" onclick="event.preventDefault();routeToLocation('${loc.id}')" style="color:#00d4e8;font-weight:700;font-size:12px">♿ Get Accessible Route →</a>`
+    );
+
+    marker.on('click', () => {
+      if (loc.type === 'ramp') {
+        document.getElementById('rampBar').style.display = 'flex';
+        document.getElementById('rampBarText').textContent = `${loc.name} — ${loc.desc}`;
+        setTimeout(() => { document.getElementById('rampBar').style.display = 'none'; }, 5000);
+      }
+    });
+  });
+}
+
+// ── ROUTE
+const userPoint = { id:'you', name:'My Location', lat:15.14425, lng:73.96135 };
+let selectedDestinationId = 'library';
+const routeProfiles = {
+  admission: {
+    distance: 180, time:'3 min', slowTime:'4 min', note:'left-side accessible entry with waiting area',
+    steps:['Start from Main Entrance','Take the left-side accessible path','Pass the reserved parking bay','Enter the Admission Cell through the ramp entrance']
+  },
+  hostel: {
+    distance: 430, time:'7 min', slowTime:'10 min', note:'buggy recommended for elderly users',
+    steps:['Start from Main Entrance','Continue on the left-side campus path','Pass the Admission Cell','Use the Hostel Block ramp or elevator entrance']
+  },
+  fountain: {
+    distance: 110, time:'2 min', slowTime:'3 min', note:'central rest zone with benches and water nearby',
+    steps:['Start from Main Entrance','Go straight on the central accessible walkway','Follow the tactile guide towards the fountain','Stop at Fountain Court rest zone']
+  },
+  acad_a: {
+    distance: 260, time:'4 min', slowTime:'6 min', note:'ramp, elevator, accessible WC and water available',
+    steps:['Start from Main Entrance','Move through Fountain Court','Take the right-side accessible pathway','Enter Academic Block through the ramp/elevator side']
+  },
+  acad_b: {
+    distance: 310, time:'5 min', slowTime:'7 min', note:'use Fountain Court detour to avoid the narrow path zone',
+    steps:['Start from Main Entrance','Move through Fountain Court','Keep right towards Academic Extension','Avoid the narrow path zone and use the marked accessible route']
+  },
+  cafeteria: {
+    distance: 310, time:'5 min', slowTime:'7 min', note:'accessible side entry near canteen seating',
+    steps:['Start from Main Entrance','Go straight to Fountain Court','Turn right after the fountain','Pass the Academic side and enter Canteen through the side ramp']
+  },
+  bank: {
+    distance: 330, time:'5 min', slowTime:'7 min', note:'bank is beside the right-side academic/canteen route',
+    steps:['Start from Main Entrance','Move through Fountain Court','Take the right accessible path','Pass Canteen side and reach Campus Bank']
+  },
+  library: {
+    distance: 360, time:'6 min', slowTime:'8 min', note:'wide covered ramp and quiet rest area available',
+    steps:['Start from Main Entrance','Move through Fountain Court','Follow the accessible path beside Academic Block','Use the Library covered ramp entrance']
+  },
+  medical: {
+    distance: 390, time:'6 min', slowTime:'7 min', note:'fast emergency route connected with SOS',
+    steps:['Start from Main Entrance','Use the central accessible path','Turn right after Fountain Court','Follow medical markers to the Medical Help Centre']
+  },
+  buggy_stop: {
+    distance: 120, time:'2 min', slowTime:'2 min', note:'buggy pickup for elderly, injured students and wheelchair users',
+    steps:['Start from Main Entrance','Move towards the Fountain Court route','Stop at the yellow buggy pickup marker','Wait near the shaded accessible pickup point']
+  },
+  parking_elderly: {
+    distance: 95, time:'2 min', slowTime:'3 min', note:'reserved accessible parking near Main Entrance',
+    steps:['Start from Main Entrance','Move slightly left towards the parking bay','Follow blue accessible parking signs','Buggy pickup is available beside the reserved bays']
+  },
+  water2: {
+    distance: 280, time:'4 min', slowTime:'6 min', note:'accessible-height water outlet near Academic Block',
+    steps:['Start from Main Entrance','Move through Fountain Court','Follow the right-side accessible path','Stop at the Academic Block water outlet']
+  },
+  wc1: {
+    distance: 300, time:'5 min', slowTime:'7 min', note:'accessible restroom with grab bars and emergency cord',
+    steps:['Start from Main Entrance','Move through Fountain Court','Enter Academic Block through the ramp side','Follow restroom signs on the ground floor']
+  },
+  ramp3: {
+    distance: 260, time:'4 min', slowTime:'6 min', note:'main accessible ramp for Academic Block',
+    steps:['Start from Main Entrance','Move through Fountain Court','Take the right-side path','Stop at Academic Block Ramp']
+  },
+  elev1: {
+    distance: 270, time:'4 min', slowTime:'6 min', note:'Academic Block elevator with wide doors and audio announcement',
+    steps:['Start from Main Entrance','Move through Fountain Court','Enter Academic Block through the ramp side','Continue to the elevator lobby']
+  },
+  rest4: {
+    distance: 250, time:'4 min', slowTime:'6 min', note:'quiet corridor seating near Academic Block',
+    steps:['Start from Main Entrance','Move through Fountain Court','Follow the Academic Block accessible path','Stop at Academic Corridor Seating']
+  }
+};
+
+const routeAliases = {
+  entrance:'entrance', gate:'entrance', main:'entrance', entry:'entrance',
+  admission:'admission', office:'admission', admin:'admission',
+  hostel:'hostel', dorm:'hostel',
+  fountain:'fountain', central:'fountain', court:'fountain', quad:'fountain',
+  academic:'acad_a', 'academic a':'acad_a', 'academic block':'acad_a', 'block a':'acad_a',
+  'academic b':'acad_b', 'academic extension':'acad_b', 'block b':'acad_b', lab:'acad_b',
+  cafeteria:'cafeteria', canteen:'cafeteria', food:'cafeteria', cafe:'cafeteria',
+  bank:'bank', atm:'bank',
+  library:'library', study:'library', books:'library',
+  medical:'medical', clinic:'medical', nurse:'medical', hospital:'medical', firstaid:'medical', 'first aid':'medical',
+  parking:'parking_elderly', reserved:'parking_elderly', 'reserved parking':'parking_elderly',
+  buggy:'buggy_stop', cart:'buggy_stop', pickup:'buggy_stop', shuttle:'buggy_stop',
+  water:'water2', 'water outlet':'water2', restroom:'wc1', toilet:'wc1', washroom:'wc1', ramp:'ramp3', elevator:'elev1', lift:'elev1', rest:'rest4', bench:'rest4'
+};
+
+function normalizeRouteId(value) {
+  const raw = String(value || '').toLowerCase().trim().replace(/[^a-z0-9\s_]/g, ' ').replace(/\s+/g, ' ');
+  if (!raw) return 'library';
+
+  // Exact id match first. This prevents "library" accidentally becoming water/rest/etc.
+  if (locations.some(l => l.id === raw)) return raw;
+  if (routeAliases[raw]) return routeAliases[raw];
+
+  // Phrase match with word boundaries only.
+  const keys = Object.keys(routeAliases).sort((a,b) => b.length - a.length);
+  for (const key of keys) {
+    const pattern = new RegExp(`(^|\\s)${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`);
+    if (pattern.test(raw)) return routeAliases[key];
+  }
+
+  // Exact location-name match only, not loose single-word matching.
+  const exactName = locations.find(l => l.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim() === raw);
+  return exactName ? exactName.id : null;
+}
+
+function getLoc(id) {
+  if (id === 'you') return userPoint;
+  const cleanId = normalizeRouteId(id) || id;
+  return locations.find(l => l.id === cleanId) || null;
+}
+
+function routeWaypoints(from, to, slow=false) {
+  const fountain = getLoc('fountain');
+  const parking = getLoc('parking_elderly');
+  const buggy = getLoc('buggy_stop');
+
+  if (!from || !to) return [];
+  if (from.id === to.id) return [[from.lat, from.lng]];
+  if (to.id === 'parking_elderly') return [[from.lat,from.lng], [to.lat,to.lng]];
+  if (to.id === 'buggy_stop') return [[from.lat,from.lng], [to.lat,to.lng]];
+
+  // Destination-specific paths so every selected option goes to the correct marker.
+  if (['admission','hostel'].includes(to.id)) {
+    return slow ? [[from.lat,from.lng], [parking.lat,parking.lng], [to.lat,to.lng]] : [[from.lat,from.lng], [to.lat,to.lng]];
+  }
+  if (['cafeteria','bank','medical','acad_a','acad_b','library'].includes(to.id)) {
+    return slow ? [[from.lat,from.lng], [parking.lat,parking.lng], [fountain.lat,fountain.lng], [to.lat,to.lng]] : [[from.lat,from.lng], [fountain.lat,fountain.lng], [to.lat,to.lng]];
+  }
+  return [[from.lat,from.lng], [fountain.lat,fountain.lng], [to.lat,to.lng]];
+}
+function drawRoute(destinationId = selectedDestinationId) {
+  routeToLocation(destinationId);
+}
+function routeToLocation(destinationId='library') {
+  if (voiceOn && !window.__voiceCommandRouting) {
+    stopVoiceOnNavigationChange('🎙️ Voice command stopped because you selected a new route.');
+  }
+  const normalizedDestination = normalizeRouteId(destinationId);
+  const to = getLoc(normalizedDestination);
+  if (!to) {
+    showToast('⚠️ Place not found. Try Library, Canteen, Bank, Hostel, Medical, Water, Ramp, or Parking.');
+    speak('I could not find that place. Please say a clear campus location like library, canteen, bank, hostel, medical centre, water outlet, ramp, elevator, restroom, parking, or buggy stop.');
+    return;
+  }
+
+  selectedDestinationId = to.id;
+  const fromIdRaw = document.getElementById('fromSelect')?.value || 'you';
+  const from = getLoc(fromIdRaw) || userPoint;
+  if (!map) return;
+  if (routeLine) map.removeLayer(routeLine);
+
+  const profile = routeProfiles[to.id] || {
+    distance: Math.max(40, Math.round(map.distance([from.lat, from.lng], [to.lat, to.lng]))),
+    time:'3 min', slowTime:'5 min', note:`you will arrive at ${to.name}`,
+    steps:[`Start from ${from.name}`, `Follow the marked accessible campus path`, `Arrive at ${to.name}`]
+  };
+  const pts = routeWaypoints(from, to, slowed || currentRouteMode === 'slow');
+  const color = currentRouteMode === 'slow' ? '#ffab40' : currentRouteMode === 'night' ? '#32f58d' : currentRouteMode === 'evacuation' ? '#ff4d6d' : currentRouteMode === 'medical-fast' ? '#ff5252' : currentRouteMode === 'wheelchair-priority' ? '#32f58d' : to.id === 'medical' ? '#ff5252' : '#22d3ee';
+  routeLine = L.polyline(pts, { color, weight:6, opacity:.9, dashArray:'12,7', lineCap:'round' }).addTo(map);
+  map.fitBounds(routeLine.getBounds(), { padding:[70,70] });
+
+  const bar = document.getElementById('routeBar');
+  bar.classList.add('show');
+  document.getElementById('routeTitle').innerHTML = `${from.name} → <span class="route-destination">${to.name}</span>`;
+  const meta = slowed || currentRouteMode === 'slow' ? profile.slowTime : profile.time;
+  const badge = currentRouteMode === 'night' ? 'Night safe' : currentRouteMode === 'evacuation' ? 'Evacuation' : currentRouteMode === 'medical-fast' ? 'Medical fast' : currentRouteMode === 'wheelchair-priority' ? 'Wheelchair priority' : to.type === 'buggy' ? 'Buggy pickup' : to.type === 'parking' ? 'Reserved parking' : to.type === 'water' ? 'Water outlet' : to.type === 'wc' ? 'Restroom' : to.type === 'ramp' ? 'Ramp' : to.type === 'elevator' ? 'Elevator' : 'Accessible';
+  document.querySelector('.rb-badge').textContent = badge;
+  document.querySelector('.rb-time').textContent = `${profile.distance}m · ${meta}`;
+  document.getElementById('routeSteps').innerHTML = profile.steps.map(step => `<div class="rb-step">${step}</div>`).join('') + `<div class="rb-step">✅ ${profile.note}</div>`;
+
+  const select = document.getElementById('toSelect');
+  if (select && Array.from(select.options).some(o => o.value === to.id)) select.value = to.id;
+  showToast(`♿ Route to ${to.name} drawn`);
+  speak(`Route to ${to.name}. Distance ${profile.distance} metres, estimated ${meta}. ${profile.steps.join('. ')}. ${profile.note}.`);
+}
+
+let currentRouteMode = 'wheelchair';
+function routeMode(mode) { currentRouteMode = mode; slowed = mode === 'slow'; }
+
+function routeToModal() {
+  closeModal();
+  switchPage('map');
+  const title = (currentModalData.title || '').toLowerCase();
+  const match = locations.find(l => title.includes(l.name.toLowerCase().replace(' —','').split(' ')[0]) || l.name.toLowerCase().includes(title.split(' ')[0]));
+  setTimeout(() => routeToLocation(match?.id || selectedDestinationId || 'library'), 300);
+}
+
+function requestBuggy(pickup='your current location') {
+  showToast('🛺 Buggy request sent · ETA 4 min');
+  speak(`Buggy request sent from ${pickup}. Estimated arrival is 4 minutes. Please wait at the nearest shaded accessible pickup point.`);
+  switchPage('map');
+  setTimeout(() => routeToLocation('buggy_stop'), 250);
+}
+
+// ── PAGE SWITCH
+function switchPage(id) {
+  const currentActive = document.querySelector('.page.active')?.id?.replace('page-', '');
+
+  // IMPORTANT: whenever the user moves away from the current section,
+  // stop voice recognition + stop any speaking navigation immediately.
+  if (currentActive && currentActive !== id) {
+    stopVoiceOnNavigationChange('🎙️ Voice command stopped because you changed section.');
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  const tab = document.querySelector(`[data-page="${id}"]`);
+  if (page) page.classList.add('active');
+  if (tab) tab.classList.add('active');
+  if (id === 'map') {
+    if (!map) {
+      setTimeout(initMap, 100);
+    } else {
+      setTimeout(() => map.invalidateSize(), 120);
+    }
+  }
+}
+
+// ── PILLS (map filter)
+function togglePill(el) {
+  el.classList.toggle('active');
+  const filter = el.dataset.filter;
+  showToast(el.classList.contains('active') ? `✅ ${el.textContent.trim()} shown` : `❌ ${el.textContent.trim()} hidden`);
+}
+
+// ── FAC FILTER
+function filterFac(type, el) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#facList .ni').forEach(ni => {
+    ni.style.display = (type === 'all' || ni.dataset.type === type) ? 'flex' : 'none';
+  });
+}
+
+// ── MODAL
+let currentModalData = {};
+function openModal(icon, title, body, type='') {
+  currentModalData = { icon, title, body, type };
+  document.getElementById('modalIcon').textContent = icon;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').textContent = body;
+  const tags = document.getElementById('modalTags');
+  tags.innerHTML = '';
+  if (type === 'ramp') { tags.innerHTML += `<span class="modal-tag" style="background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)">♿ Ramp</span>`; }
+  if (type === 'elevator') { tags.innerHTML += `<span class="modal-tag" style="background:rgba(187,134,252,.1);color:var(--purple);border:1px solid rgba(187,134,252,.25)">🛗 Elevator</span>`; }
+  if (type === 'water') { tags.innerHTML += `<span class="modal-tag" style="background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.25)">💧 Accessible height</span>`; }
+  if (type === 'rest') { tags.innerHTML += `<span class="modal-tag" style="background:rgba(255,171,64,.1);color:var(--amber);border:1px solid rgba(255,171,64,.25)">🌿 Rest Area</span>`; }
+  if (type === 'medical') { tags.innerHTML += `<span class="modal-tag" style="background:rgba(255,82,82,.1);color:var(--red);border:1px solid rgba(255,82,82,.25)">🏥 Emergency</span>`; }
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalBg')) {
+    document.getElementById('modalBg').classList.remove('open');
+  }
+}
+
+// ── ALERTS
+function toggleAlerts() {
+  document.getElementById('alertPanel').classList.toggle('open');
+}
+
+// ── FONT SIZE
+function toggleFsBar() {
+  document.getElementById('fsBar').classList.toggle('hidden');
+}
+
+function setFs(scale, el) {
+  document.querySelectorAll('.fs-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.documentElement.style.fontSize = (scale * 100) + '%';
+  showToast('🔤 Text size set to ' + Math.round(scale * 100) + '%');
+}
+
+// ── HIGH CONTRAST
+function toggleHighContrast(toggle) {
+  toggle.classList.toggle('on');
+  if (toggle.classList.contains('on')) {
+    document.documentElement.style.setProperty('--text', '#ffffff');
+    document.documentElement.style.setProperty('--text2', '#d0d8e4');
+    document.documentElement.style.setProperty('--surface', '#0a0f14');
+    showToast('👁️ High contrast enabled');
+  } else {
+    document.documentElement.style.removeProperty('--text');
+    document.documentElement.style.removeProperty('--text2');
+    document.documentElement.style.removeProperty('--surface');
+    showToast('👁️ High contrast disabled');
+  }
+}
+
+// ── VOICE — improved command engine
+let voiceOn = false;
+let recognition = null;
+let muteRouteSpeechUntil = 0;
+let isRecognitionStarting = false;
+let lastVoiceCommand = '';
+let lastVoiceAt = 0;
+
+const voiceDestinationAliases = [
+  { id:'admission', phrases:['admission cell','admission office','admin office','admission','office'] },
+  { id:'acad_b', phrases:['academic block b','academic b','block b','academic extension','extension block','lab block','labs'] },
+  { id:'acad_a', phrases:['academic block a','academic a','block a','academic block','academic','classroom','classrooms'] },
+  { id:'parking_elderly', phrases:['reserved accessible parking','reserved parking','accessible parking','elderly parking','parking'] },
+  { id:'buggy_stop', phrases:['buggy pickup stop','buggy stop','buggy pickup','pickup point','pickup stop','shuttle stop','cart stop'] },
+  { id:'medical', phrases:['medical centre','medical center','medical room','medical','clinic','first aid','firstaid','nurse','hospital'] },
+  { id:'cafeteria', phrases:['cafeteria','canteen','food court','food','cafe'] },
+  { id:'library', phrases:['library','study area','study room','books'] },
+  { id:'hostel', phrases:['hostel block','hostel','dormitory','dorm'] },
+  { id:'fountain', phrases:['fountain court','central fountain','fountain','central court','quad'] },
+  { id:'entrance', phrases:['main entrance','entrance gate','main gate','entry gate','entrance','gate'] },
+  { id:'bank', phrases:['campus bank','bank counter','bank','atm'] },
+  { id:'water2', phrases:['nearest water outlet','water outlet','drinking water','water point','water'] },
+  { id:'wc1', phrases:['nearest restroom','accessible restroom','washroom','bathroom','toilet','restroom','wc'] },
+  { id:'ramp3', phrases:['nearest ramp','accessible ramp','wheelchair ramp','ramp'] },
+  { id:'elev1', phrases:['nearest elevator','elevator','lift'] },
+  { id:'rest4', phrases:['nearest rest area','rest area','rest zone','bench','seating','sit'] }
+];
+
+function cleanVoiceText(t) {
+  return String(t || '')
+    .toLowerCase()
+    .replace(/parul|campus|please|can you|could you|would you|show me|take me|navigate me|guide me|route me|go to|to the|to a|to an|where is|where are|find|nearest|nearby/g, ' ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolveVoiceDestination(text) {
+  const original = String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const cleaned = cleanVoiceText(original);
+
+  // 1) exact campus id
+  if (locations.some(l => l.id === cleaned)) return cleaned;
+
+  // 2) longest exact phrase first, so "academic block b" will not become "academic block"
+  const all = [];
+  voiceDestinationAliases.forEach(item => item.phrases.forEach(phrase => all.push({ id:item.id, phrase })));
+  all.sort((a,b) => b.phrase.length - a.phrase.length);
+  for (const item of all) {
+    const safe = item.phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|\\s)${safe}(\\s|$)`).test(original)) return item.id;
+    if (cleaned === item.phrase) return item.id;
+  }
+
+  // 3) location full-name exact match
+  const exactName = locations.find(l => l.name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim() === cleaned);
+  return exactName ? exactName.id : null;
+}
+
+function stopVoiceGuidance(reason = '', options = {}) {
+  const { announce = false, muteRouteSpeechMs = 1500 } = options;
+  if (muteRouteSpeechMs) muteRouteSpeechUntil = Date.now() + muteRouteSpeechMs;
+
+  voiceOn = false;
+  window.__voiceCommandRouting = false;
+  window.__voiceSpeaking = false;
+
+  try {
+    if (recognition) {
+      recognition.onend = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      if (recognition.abort) recognition.abort();
+      recognition.stop();
+    }
+  } catch(e) {}
+  recognition = null;
+  isRecognitionStarting = false;
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.cancel(), 80);
+    setTimeout(() => window.speechSynthesis.cancel(), 250);
+  }
+
+  const orb = document.getElementById('vOrb');
+  const status = document.getElementById('vStatus');
+  const box = document.getElementById('vBox');
+  if (orb) orb.classList.remove('on');
+  if (status) status.textContent = 'Tap to start voice guidance';
+  if (box && reason) box.textContent = 'Voice navigation stopped.';
+  if (announce && reason) showToast(reason);
+}
+
+function stopVoiceOnNavigationChange(reason) {
+  stopVoiceGuidance(reason || '🎙️ Voice command stopped.', { announce: true, muteRouteSpeechMs: 1800 });
+}
+
+function toggleVoice() {
+  if (voiceOn) {
+    stopVoiceGuidance('', { muteRouteSpeechMs: 0 });
+    speak('Voice guidance stopped.', { force:true, noRestart:true });
+    return;
+  }
+  voiceOn = true;
+  document.getElementById('vOrb')?.classList.add('on');
+  const status = document.getElementById('vStatus');
+  if (status) status.textContent = '🎙️ Listening…';
+  const box = document.getElementById('vBox');
+  if (box) box.textContent = 'Voice command activated. Say: “Library”, “Water”, “Medical”, “SOS”, or “Stop”.';
+  startRecognition();
+  speak('Voice command activated', { force:true });
+}
+
+function startRecognition() {
+  if (!voiceOn || isRecognitionStarting || window.__voiceSpeaking) return;
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    document.getElementById('vBox').textContent = 'Speech recognition not supported in this browser. Try Chrome on Android.';
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = 'en-IN';
+  isRecognitionStarting = true;
+
+  recognition.onstart = () => { isRecognitionStarting = false; };
+  recognition.onresult = (e) => {
+    const last = e.results[e.results.length - 1];
+    if (!last || !last.isFinal) return;
+    const t = last[0].transcript.trim();
+    const normalized = t.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    const now = Date.now();
+    if (normalized === lastVoiceCommand && now - lastVoiceAt < 1600) return;
+    lastVoiceCommand = normalized;
+    lastVoiceAt = now;
+    document.getElementById('vBox').textContent = 'Heard: "' + t + '"';
+    handleVoiceCommand(t);
+  };
+  recognition.onerror = () => {
+    isRecognitionStarting = false;
+    if (voiceOn) document.getElementById('vBox').textContent = 'Could not hear clearly. Try: “Take me to library”.';
+  };
+  recognition.onend = () => {
+    isRecognitionStarting = false;
+    if (voiceOn && !window.__voiceSpeaking) setTimeout(startRecognition, 350);
+  };
+  try { recognition.start(); } catch(e) { isRecognitionStarting = false; }
+}
+
+function pauseRecognitionWhileSpeaking() {
+  try {
+    if (recognition) {
+      recognition.onend = null;
+      if (recognition.abort) recognition.abort();
+      recognition.stop();
+    }
+  } catch(e) {}
+  recognition = null;
+  isRecognitionStarting = false;
+}
+
+function executeVoiceRoute(id) {
+  window.__voiceCommandRouting = true;
+  switchPage('map');
+  setTimeout(() => {
+    routeToLocation(id);
+    window.__voiceCommandRouting = false;
+  }, 250);
+}
+
+function handleVoiceCommand(t) {
+  const original = String(t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = cleanVoiceText(original);
+
+  if (/\b(stop|cancel|end|off|quiet)\b/.test(original) && /\b(voice|navigation|route|guidance|speaking)\b/.test(original) || original === 'stop') {
+    stopVoiceGuidance('', { muteRouteSpeechMs: 0 });
+    speak('Navigation stopped.', { force:true, noRestart:true });
+    return;
+  }
+
+  if (/\b(help|sos|emergency|accident|injury|injured|security)\b/.test(original)) {
+    window.__voiceCommandRouting = true;
+    switchPage('sos');
+    window.__voiceCommandRouting = false;
+    speak('Emergency section opened. Use the big SOS button for campus security, medical help, or volunteer support.', { force:true });
+    return;
+  }
+
+
+  if (/(lost|found|lost and found|missing item|lost item)/.test(original)) {
+    openLostFound();
+    speak('Lost and found assistance opened.', { force:true });
+    return;
+  }
+
+  if (/(crowd|crowded|busy|density)/.test(original)) {
+    updateCrowd();
+    speak('Crowd density opened.', { force:true });
+    return;
+  }
+
+  if (/(night|safe route|dark|well lit|lit path)/.test(original)) {
+    safeNightMode();
+    return;
+  }
+
+  if (/(evacuation|evacuate|exit|fire exit)/.test(original)) {
+    evacuationMode();
+    return;
+  }
+
+  if (/(battery|low battery|power saving|battery saver)/.test(original)) {
+    batterySaverMode();
+    speak('Battery saver mode toggled.', { force:true });
+    return;
+  }
+
+  if (/(nearest help|help nearby|volunteer|student coordinator|coordinator|security desk)/.test(original)) {
+    nearestHelp();
+    speak('Nearest help opened.', { force:true });
+    return;
+  }
+
+  if (/(wheelchair priority|priority route|best wheelchair route)/.test(original)) {
+    wheelchairPriorityRoute();
+    return;
+  }
+
+  if (/(fast medical|medical shortcut|nearest medical|health centre|health center)/.test(original)) {
+    medicalShortcut();
+    return;
+  }
+
+  if (/\b(construction|detour|blocked|closed path|warning)\b/.test(original)) {
+    speak('Construction alert. The east path between Academic Extension and Canteen is blocked. Use the Fountain Court detour for accessible navigation.', { force:true });
+    showToast('🚧 Construction active — use Fountain Court detour');
+    return;
+  }
+
+  if (/\b(slow pace|elderly|senior|slow route|easy route|flat route)\b/.test(original)) {
+    routeMode('slow');
+    showToast('🐢 Slow pace mode on');
+    speak('Slow pace mode is on. Routes will prefer flatter paths, rest areas, water points, and buggy pickup when needed.', { force:true });
+    return;
+  }
+
+  if (/\b(book|call|request|get|need)\b/.test(original) && /\b(buggy|cart|shuttle|pickup)\b/.test(original)) {
+    showToast('🛺 Buggy request sent · ETA 4 min');
+    speak('Buggy request sent. I am also showing the route to the buggy pickup stop.', { force:true });
+    executeVoiceRoute('buggy_stop');
+    return;
+  }
+
+  const routeId = resolveVoiceDestination(original) || normalizeRouteId(text);
+  if (routeId) {
+    const loc = getLoc(routeId);
+    if (loc) {
+      document.getElementById('vBox').textContent = `Command matched: ${loc.name}`;
+      executeVoiceRoute(routeId);
+      return;
+    }
+  }
+
+  speak('I did not catch the exact place. Try saying: take me to library, canteen, bank, hostel, medical centre, water outlet, restroom, ramp, elevator, reserved parking, or buggy stop.', { force:true });
+}
+
+function simVoice(cmd) {
+  const box = document.getElementById('vBox');
+  if (box) box.textContent = 'Test command: "' + cmd + '"';
+  handleVoiceCommand(cmd);
+  showToast('🗣️ "' + cmd + '"');
+}
+
+function speak(text, options = {}) {
+  const { force = false, noRestart = false } = options;
+  if (!force && Date.now() < muteRouteSpeechUntil) return;
+  if (!('speechSynthesis' in window)) return;
+
+  pauseRecognitionWhileSpeaking();
+  window.speechSynthesis.cancel();
+  window.__voiceSpeaking = true;
+
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.88;
+  u.pitch = 1.02;
+  u.lang = 'en-IN';
+  u.onend = () => {
+    window.__voiceSpeaking = false;
+    if (voiceOn && !noRestart) setTimeout(startRecognition, 350);
+  };
+  u.onerror = () => {
+    window.__voiceSpeaking = false;
+    if (voiceOn && !noRestart) setTimeout(startRecognition, 350);
+  };
+  window.speechSynthesis.speak(u);
+}
+
+
+
+// ── HACKATHON SMART FEATURES ADD-ON
+let nightSafeOn = false;
+let batterySaverOn = false;
+let wheelchairPriorityOn = false;
+
+function smartHazardAlerts() {
+  toggleAlerts();
+  showToast('⚠️ Smart hazard alerts opened');
+  speak('Smart hazard alerts opened.', { force:true });
+}
+
+function openLostFound() {
+  openModal('🎒','Lost & Found Assistance','Report or search a lost item with last-seen location, QR zone, time, and item type. For the demo: a wallet was reported near Library Garden and a water bottle near Canteen seating. This can connect to security desk and student coordinators in real life.','info');
+}
+
+function updateCrowd() {
+  openModal('👥','Live Crowd Density','Current campus density: Canteen is high, Fountain Court is medium, Library is low, Medical Centre is low. Accessible routes will avoid high-crowd areas when possible.','info');
+  showToast('👥 Crowd density updated');
+}
+
+function evacuationMode() {
+  currentRouteMode = 'evacuation';
+  slowed = false;
+  switchPage('map');
+  setTimeout(() => routeToLocation('entrance'), 200);
+  showToast('🚨 Evacuation route: nearest accessible exit');
+  speak('Evacuation mode activated. Showing nearest accessible exit route.', { force:true });
+}
+
+function safeNightMode() {
+  nightSafeOn = !nightSafeOn;
+  document.body.classList.toggle('night-safe', nightSafeOn);
+  currentRouteMode = nightSafeOn ? 'night' : 'wheelchair';
+  showToast(nightSafeOn ? '🌙 Night safe-route mode ON' : '🌙 Night safe-route mode OFF');
+  speak(nightSafeOn ? 'Night safe route mode activated.' : 'Night safe route mode turned off.', { force:true });
+}
+
+function batterySaverMode() {
+  batterySaverOn = !batterySaverOn;
+  document.body.classList.toggle('battery-mode', batterySaverOn);
+  showToast(batterySaverOn ? '🔋 Battery saver accessibility mode ON' : '🔋 Battery saver OFF');
+}
+
+function nearestHelp() {
+  openModal('🤖','Nearest Help AI Shortcut','Nearest available support: Student Volunteer Aditi — 55m near Fountain Court, Security Desk — 95m near Main Entrance, Medical Centre — 140m. Recommended now: contact volunteer first, then route to Medical Centre if health support is needed.','help');
+}
+
+function wheelchairPriorityRoute() {
+  wheelchairPriorityOn = true;
+  currentRouteMode = 'wheelchair-priority';
+  showToast('♿ Wheelchair priority routing ON');
+  speak('Wheelchair priority routing activated.', { force:true });
+  switchPage('map');
+  setTimeout(() => routeToLocation(document.getElementById('toSelect')?.value || selectedDestinationId || 'library'), 200);
+}
+
+function medicalShortcut() {
+  currentRouteMode = 'medical-fast';
+  switchPage('map');
+  setTimeout(() => routeToLocation('medical'), 200);
+  showToast('🏥 Fast medical shortcut activated');
+}
+
+function improveAccessibilityLabels() {
+  openModal('🏷️','Real-Life Accessibility Labels','Every important campus point now uses practical labels: ramp grade, path width, tactile strips, shade, seating, water distance, elevator status, crowd level and emergency support. These details help judges see how the idea works in real life.','info');
+}
+
+// ── QR
+function selectQR(name, id) {
+  document.getElementById('qrLocName').textContent = `${name} · ${id}`;
+  showToast(`📍 QR set: ${name}`);
+}
+
+// ── TOAST
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── MAP FILTER
+function filterMap(query) {
+  // Future: filter markers
+}
+
+
+// Extra safety: stop voice the moment a tab/section button is tapped,
+// before the page switches, so speech cannot continue over other sections.
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  const sosTop = e.target.closest('.pill-btn.danger');
+  if ((tab || sosTop) && voiceOn) {
+    stopVoiceOnNavigationChange('🎙️ Voice command stopped because you changed section.');
+  }
+}, true);
+
+// ── SPLASH → APP
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      initMap();
+      ['fromSelect','toSelect'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => {
+          if (voiceOn) stopVoiceOnNavigationChange('🎙️ Voice command stopped because route option changed.');
+        });
+      });
+    }, 700);
+  }, 2600);
+});
+
+function toggleMapFocus(){
+  const page = document.getElementById('page-map');
+  const btn = document.getElementById('focusMapBtn');
+  if(!page) return;
+  page.classList.toggle('map-focus-mode');
+  const full = page.classList.contains('map-focus-mode');
+  if(btn) btn.textContent = full ? '☰ Show Controls' : '🗺️ Full Map';
+  setTimeout(() => { if (window.map && map.invalidateSize) map.invalidateSize(); }, 250);
+}
+
+</script>
+</body>
+</html>
